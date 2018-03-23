@@ -24,16 +24,10 @@ end
 
 data= sum(init_individual_exp'); %adds expoential functions together
 
-
-% generate the noise
 noise_mean = 0;
-noise_std_dev = 0.05;
-noise = normrnd(noise_mean, noise_std_dev, 1,length(time));
+noise_std_dev = 1;
 
-data = noise + data
+noise = norm(mean, std_dev, );
 
 figure(1)
 plot(time, data);
-title('Measured Signal (Sum of different exponentials)')
-xlabel('Time [s]')
-ylabel('Amplitude')
