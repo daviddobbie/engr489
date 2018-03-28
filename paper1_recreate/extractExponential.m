@@ -1,6 +1,8 @@
 %% David Dobbie
 % Recreating paper 1 (Solving Fredholm Integrals of the first Kind With
 % Tensor Product Structure in 2 and 2.5 Dimensions)
+%
+% 1053-587X(02)03282-8
 
 %Aim: Extract the exponential time constants from a summation of several
 %       type of them.
@@ -15,14 +17,14 @@ time_const = 0.1 : 0.1 : 4;
 time_constants = [-6, -2];
 exp_weightings = [-1, 3];
 
-time = 0:0.2:10;
+time = 0:0.2:20;
 init_individual_exp = [];
 
 
 
 
 for tc= time_constants
-    init_individual_exp = [init_individual_exp; exp(tc*time)];
+    init_individual_exp = [init_individual_exp; exp(time/tc)];
     %%init_individual_exp = [init_individual_exp; normpdf(time, tc, 0.15) ];
 
 end
@@ -33,7 +35,7 @@ end
 data= sum(init_individual_exp); %adds exponetial functions together
 
 
-K_1 = exp(-time*1);
+K_1 = exp(time/(-6));
 
 K_2 = ones(size(data'));
 
@@ -82,14 +84,14 @@ figure(2)
 clf
 hold on
 f = c;
-
+title('c_r vector changing at each iteration');
 %this is the method that prevents it being divergent
-for i=1:10
+for i=1:20
     %k_square = K_0*K_0'; 
     stepFnMatrix = (heaviside(c.*K_0)).* eye(size(K_0'*K_0));
     k_square = K_0 *  stepFnMatrix * K_0';       %recreate eq 30
     %made symmetric and semi-positive definite
-    c = inv(k_square + alpha*eye(size(k_square)))*m;
+    c = inv(k_square + alpha*eye(size(k_square)))*m; %eq 29
     plot(time, (K_0.*c')')
 
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
@@ -124,9 +126,8 @@ figure(3)
 clf
 hold on
 plot(time, f,'r')
-plot(time, m,'b')
 hold off
-legend("Density Function","Measured")
+legend("Density Function")
 title('Probability Density Function for x')
 ylabel('f(x)')
 xlabel('x')
