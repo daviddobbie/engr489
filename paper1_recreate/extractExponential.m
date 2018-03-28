@@ -10,47 +10,67 @@ clf
 clear
 
 
-time_constants = [1, 4];
-exp_weightings = [1, 3];
+time_const = 0.1 : 0.1 : 4;
 
-time = 0:0.05:2;
+time_constants = [-6, -2];
+exp_weightings = [-1, 3];
+
+time = 0:0.2:10;
 init_individual_exp = [];
 
 
 
-for t=time
-    init_individual_exp = [init_individual_exp; exp_weightings.*exp(-time_constants*t)];
+
+for tc= time_constants
+    init_individual_exp = [init_individual_exp; exp(tc*time)];
+    %%init_individual_exp = [init_individual_exp; normpdf(time, tc, 0.15) ];
+
 end
 
-data= sum(init_individual_exp'); %adds expoential functions together
 
+
+
+data= sum(init_individual_exp); %adds exponetial functions together
+
+
+K_1 = exp(-time*1);
+
+K_2 = ones(size(data'));
+
+%m = (K_1.*data)'; %for pdf of the it
+
+%K_0 = kron(K_1, K_2);
+
+K_0 = K_1;
 
 % generate the noise
 noise_mean = 0;
 noise_std_dev = 0.05;
 noise = normrnd(noise_mean, noise_std_dev, 1,length(time));
 
-data = noise + data;
+m = (noise + data)';
 
 figure(1)
-plot(time, data);
-title('Measured Signal (Sum of different exponentials)')
-xlabel('Time [s]')
+hold on
+plot(time, m,'r');
+plot (time,K_1,'b');
+plot(time,data, 'g');
+hold off
+legend("measured","kernel","noiseless data");
+title('Measured Signal Function (Sum of different exponentials)')
+xlabel('Time constant [s]')
 ylabel('Amplitude')
+
 
 
 %% Step 1 Compression
 % skipped at this point
 
-K_1 = exp(-1./time)';
 
-K_2 = ones(size(data'));
-
-K_0 = kron(K_1, K_2);
 %% Step 2 Optimisation
 
-alpha = 0.01;
-m = K_0;
+alpha = 100;
+
 
 
 
@@ -59,16 +79,19 @@ c = ones(size(m));
 alpha_hist = [];
 
 figure(2)
+clf
 hold on
-
 f = c;
 
 %this is the method that prevents it being divergent
 for i=1:10
-    k_square = K_0*K_0';    
+    %k_square = K_0*K_0'; 
+    stepFnMatrix = (heaviside(c.*K_0)).* eye(size(K_0'*K_0));
+    k_square = K_0 *  stepFnMatrix * K_0';       %recreate eq 30
+    %made symmetric and semi-positive definite
     c = inv(k_square + alpha*eye(size(k_square)))*m;
-    plot(c)
-    
+    plot(time, (K_0.*c')')
+
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
     
     alpha_hist = [alpha_hist; alpha];
@@ -92,14 +115,23 @@ for i=1:50
     
 end
 %}
-f = K_0.*c
+f = (K_0.*c')';
 
-var = K_0'*((K_0*K_0' + alpha*eye(size(k_square)))^-2)*K_0
+var = K_0'*((K_0*K_0' + alpha*eye(size(k_square)))^-2)*K_0;
 
 
 figure(3)
-plot(f)
+clf
+hold on
+plot(time, f,'r')
+plot(time, m,'b')
+hold off
+legend("Density Function","Measured")
+title('Probability Density Function for x')
+ylabel('f(x)')
+xlabel('x')
 
+trapz(time,f)
 
 figure(4)
 plot(alpha_hist)

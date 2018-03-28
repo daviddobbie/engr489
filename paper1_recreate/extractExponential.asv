@@ -11,18 +11,23 @@ clear
 
 
 time_constants = [1, 4];
-exp_weightings = [1, 3, 0.5];
+exp_weightings = [1, 3];
 
 time = 0:0.05:2;
 init_individual_exp = [];
 
 
 
+
 for t=time
-    init_individual_exp = [init_individual_exp; exp_weightings.*exp(-time_constants*t)];
+    %%init_individual_exp = [init_individual_exp; exp_weightings.*exp(-time_constants*t)];
+    init_individual_exp = [init_individual_exp;    normpdf[] ]
+
 end
 
 data= sum(init_individual_exp'); %adds expoential functions together
+
+
 
 
 % generate the noise
@@ -34,7 +39,7 @@ data = noise + data;
 
 figure(1)
 plot(time, data);
-title('Measured Signal (Sum of different exponentials)')
+title('Measured Signal Desnity Function (Sum of different exponentials)')
 xlabel('Time [s]')
 ylabel('Amplitude')
 
@@ -42,7 +47,7 @@ ylabel('Amplitude')
 %% Step 1 Compression
 % skipped at this point
 
-K_1 = exp(-);
+K_1 = exp(-1./time)';
 
 K_2 = ones(size(data'));
 
@@ -68,7 +73,7 @@ for i=1:10
     k_square = K_0*K_0';    
     c = inv(k_square + alpha*eye(size(k_square)))*m;
     plot(c)
-    
+
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
     
     alpha_hist = [alpha_hist; alpha];
@@ -92,9 +97,9 @@ for i=1:50
     
 end
 %}
-f = K_0.*c
+f = K_0.*c;
 
-var = K_0'*((K_0*K_0' + alpha*eye(size(k_square)))^-2)*K_0
+var = K_0'*((K_0*K_0' + alpha*eye(size(k_square)))^-2)*K_0;
 
 
 figure(3)
