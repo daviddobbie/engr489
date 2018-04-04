@@ -8,14 +8,11 @@
 %       type of them.
 
 
-%%
-% What is happening:
-% We are trying to find the 
 
-
+close all
 clc
 clf
-clear
+clear all
 
 %% Paul Teal FLINT init variables
 N1 = 50;       % number of data points in each dimension
@@ -24,33 +21,34 @@ N2 = 1000;
 Nx = 100;      % number of bins in relaxation time grids
 Ny = 101;      
 
+%sets how we compress the data points
+trunc1=30;
+trunc2=1;
+
 tau1min = 1e-4;
 tau1max = 10;
 deltatau2 = 3.5e-4;
 
-T1 = logspace(-2,1,Nx);
-T2 = logspace(-2,1,Ny);
+T1 = logspace(-2,1,Nx); %form T1 domain, use log since will be small
+T2 = logspace(-2,1,Ny); %form T2 domain, use log since will be small
 
 [T2a,T1a] = meshgrid(log10(T2),log10(T1));
 
+%forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*deltatau2;  
 % measurement time array (note, no t=0 data available)
-
-tau1 = logspace(log10(tau1min),log10(tau1max),N1)';
+tau1 = logspace(log10(tau1min),log10(tau1max),N1)'; 
 
 K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation data
 K1 = 1-2*exp(-tau1 *(1./T1) );  % T1 relaxation data
 %%
 
 
-time_constants = [-0.2, -0.05];
+time_constants = [-0.3, -0.05];
 exp_weightings = [1, 4];
 
 time = tau2;
 init_individual_exp = [];
-
-
-
 
 for tc= time_constants
     init_individual_exp = [init_individual_exp; exp(time/tc)'];
@@ -70,7 +68,7 @@ data= sum(init_individual_exp); %adds exponetial functions together
 
 %K0 = kron(K1, K2);
 
-K0 = K2;
+
 
 % generate the noise
 noise_mean = 0;
@@ -93,7 +91,56 @@ ylabel('Amplitude')
 
 
 %% Step 1 Compression
-% skipped at this point
+% implement TSVD (truncated singular value decomposition), get the desired
+% rank for only the largest singular values in the system.
+
+
+%svd resultsin sorted by magnitude singular values. i.e we only have to
+%truncate to s1 rowsxcols.
+[U1, S1, V1] = svd(K1);
+[U2, S2, V2] = svd(K2);
+
+
+
+
+%only leave trunc number of largest values. This removes small weigthed
+%componets that have little bearing on actual data.
+
+if trunc1 < Nx
+    S1c = S1(1:trunc1,1:trunc1);
+    U1c = U1(:,1:trunc1);
+    V1c = V1(:,1:trunc1);
+else
+    S1c = S1(1:trunc1,:);    
+    U1c = U1(:,1:trunc1);
+    V1c = V1(:,:);
+end
+
+if trunc2 < Ny
+    S2c = S2(1:trunc2,1:trunc2);
+    U2c = U2(:,1:trunc2);
+    V2c = V2(:,1:trunc2);
+else
+    S2c = S2(1:trunc2,:);
+    U2c = U2(:,1:trunc2);
+    V2c = V2(:,:);
+    
+end
+
+
+
+
+
+
+
+%set new compressed kernels
+K1 = S1c*V1c';
+K2 = S2c*V2c';
+
+
+K0 = K2;
+
+m = (m'*U2c)';
 
 
 %% Step 2 Optimisation
@@ -119,7 +166,7 @@ for i=1:20
     k_square = K0 *  stepFnMatrix * K0';       %recreate eq 30
     %made symmetric and semi-positive definite
     c = inv(k_square + alpha*eye(size(k_square)))*m; %eq 29
-    plot(time, c)
+    plot(c)
 
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
     

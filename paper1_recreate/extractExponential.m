@@ -9,17 +9,24 @@
 
 
 
-
+close all
 clc
 clf
-clear
+clear all
 
 %% Paul Teal FLINT init variables
 N1 = 50;       % number of data points in each dimension
-N2 = 1000;
+N2 = 10000;
 
 Nx = 100;      % number of bins in relaxation time grids
 Ny = 101;      
+
+%sets how we compress the data points.
+% NOTE that:
+%    N2 > trunc2 >= Ny
+%    N1 > trunc1 >= Nx
+trunc1=30;
+trunc2=100;
 
 tau1min = 1e-4;
 tau1max = 10;
@@ -40,14 +47,11 @@ K1 = 1-2*exp(-tau1 *(1./T1) );  % T1 relaxation data
 %%
 
 
-time_constants = [-0.2, -0.05];
+time_constants = [-0.3, -0.05];
 exp_weightings = [1, 4];
 
 time = tau2;
 init_individual_exp = [];
-
-
-
 
 for tc= time_constants
     init_individual_exp = [init_individual_exp; exp(time/tc)'];
@@ -67,11 +71,11 @@ data= sum(init_individual_exp); %adds exponetial functions together
 
 %K0 = kron(K1, K2);
 
-K0 = K2;
+
 
 % generate the noise
 noise_mean = 0;
-noise_std_dev = 0.05;
+noise_std_dev = 0.1;
 noise = normrnd(noise_mean, noise_std_dev, 1,length(time));
 %m = data'
 m = (noise + data)';
@@ -90,7 +94,57 @@ ylabel('Amplitude')
 
 
 %% Step 1 Compression
-% skipped at this point
+% implement TSVD (truncated singular value decomposition), get the desired
+% rank for only the largest singular values in the system.
+
+
+%svd resultsin sorted by magnitude singular values. i.e we only have to
+%truncate to s1 rowsxcols.
+[U1, S1, V1] = svd(K1);
+[U2, S2, V2] = svd(K2);
+
+
+
+
+%only leave trunc number of largest values. This removes small weigthed
+%componets that have little bearing on actual data.
+
+%Use if statements for truncation.
+if trunc1 < Nx
+    S1c = S1(1:trunc1,1:trunc1);
+    U1c = U1(:,1:trunc1);
+    V1c = V1(:,1:trunc1);
+else
+    S1c = S1(1:trunc1,:);    
+    U1c = U1(:,1:trunc1);
+    V1c = V1(:,:);
+end
+
+if trunc2 < Ny
+    S2c = S2(1:trunc2,1:trunc2);
+    U2c = U2(:,1:trunc2);
+    V2c = V2(:,1:trunc2);
+else
+    S2c = S2(1:trunc2,:);
+    U2c = U2(:,1:trunc2);
+    V2c = V2(:,:);
+    
+end
+
+
+
+
+
+
+
+%set new compressed kernels
+K1 = S1c*V1c';
+K2 = S2c*V2c';
+
+
+K0 = K2;
+
+m = (m'*U2c)';
 
 
 %% Step 2 Optimisation
@@ -109,14 +163,19 @@ clf
 hold on
 f = c;
 title('c_r vector changing at each iteration');
+
+
+% note that at more compressed values, we get more chance of divergent
+% alpha, this needs to be considered. Takes more effort!
+
 %this is the method that prevents it being divergent
-for i=1:20
+for i=1:100
     %k_square = K0*K0'; 
     stepFnMatrix = (heaviside(K0'*c)).* eye(Ny,Ny);
     k_square = K0 *  stepFnMatrix * K0';       %recreate eq 30
     %made symmetric and semi-positive definite
     c = inv(k_square + alpha*eye(size(k_square)))*m; %eq 29
-    plot(time, c)
+    plot(c)
 
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
     
