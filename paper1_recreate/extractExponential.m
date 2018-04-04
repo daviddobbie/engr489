@@ -16,7 +16,7 @@ clear all
 
 %% Paul Teal FLINT init variables
 N1 = 50;       % number of data points in each dimension
-N2 = 10000;
+N2 = 1000;
 
 Nx = 100;      % number of bins in relaxation time grids
 Ny = 101;      
@@ -32,8 +32,8 @@ tau1min = 1e-4;
 tau1max = 10;
 deltatau2 = 3.5e-4;
 
-T1 = logspace(-2,1,Nx); %form T1 domain, use log since will be small
-T2 = logspace(-2,1,Ny); %form T2 domain, use log since will be small
+T1 = logspace(-3,1,Nx); %form T1 domain, use log since will be small
+T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
 
 [T2a,T1a] = meshgrid(log10(T2),log10(T1));
 
@@ -47,25 +47,29 @@ K1 = 1-2*exp(-tau1 *(1./T1) );  % T1 relaxation data
 %%
 
 
-time_constants = [-0.3, -0.05];
-exp_weightings = [1, 4];
+time_constants_y = [-0.3, -0.05];
+time_constants_x = [-0.3, -0.3];
+exp_weightings_y = [1, 4];
 
 time = tau2;
-init_individual_exp = [];
+initexpY = [];
 
-for tc= time_constants
-    init_individual_exp = [init_individual_exp; exp(time/tc)'];
+timeX = tau1;
+initexpX = [];
+
+for tc= time_constants_y
+    initexpY = [initexpY; exp(time/tc)'];
+    initexpX = [initexpX; exp(timeX/tc)'];
     %%init_individual_exp = [init_individual_exp; normpdf(time, tc, 0.15) ];
 
 end
 
 
 
+initexpY= sum(initexpY); %adds exponetial functions together
+initexpX = sum(initexpX);
 
-data= sum(init_individual_exp); %adds exponetial functions together
-
-
-
+data = initexpX'*initexpY;
 
 %m = (K1.*data)'; %for pdf of the it
 
@@ -76,20 +80,20 @@ data= sum(init_individual_exp); %adds exponetial functions together
 % generate the noise
 noise_mean = 0;
 noise_std_dev = 0.1;
-noise = normrnd(noise_mean, noise_std_dev, 1,length(time));
+noise = normrnd(noise_mean, noise_std_dev, length(timeX),length(time));
 %m = data'
 m = (noise + data)';
 
 figure(1)
 hold on
-plot(time, m,'r');
+mesh(m);
 %%plot (time,K2,'b');
 plot(time,data, 'g');
 hold off
-legend("measured","noiseless data");
 title('Measured Signal Function (Sum of different exponentials)')
-xlabel('Time [s]')
-ylabel('Amplitude')
+xlabel('Time 1  \tau_1 [s]')
+ylabel('Time 2  \tau_2 [s]')
+zlabel('Amplitude')
 
 
 
@@ -107,7 +111,7 @@ ylabel('Amplitude')
 
 
 %only leave trunc number of largest values. This removes small weigthed
-%componets that have little bearing on actual data.
+%components that have little bearing on actual data.
 
 %Use if statements for truncation.
 if trunc1 < Nx
@@ -142,9 +146,9 @@ K1 = S1c*V1c';
 K2 = S2c*V2c';
 
 
-K0 = K2;
+K0 = kron(K1,K2);
 
-m = (m'*U2c)';
+m = (U1c'*m'*U2c);
 
 
 %% Step 2 Optimisation
@@ -170,9 +174,9 @@ title('c_r vector changing at each iteration');
 
 %this is the method that prevents it being divergent
 for i=1:100
-    %k_square = K0*K0'; 
-    stepFnMatrix = (heaviside(K0'*c)).* eye(Ny,Ny);
-    k_square = K0 *  stepFnMatrix * K0';       %recreate eq 30
+    k_square = K0*K0'; 
+    %stepFnMatrix = (heaviside(K0'*c)).* eye(Nx,Ny);
+    %k_square = K0 *  stepFnMatrix * K0';       %recreate eq 30
     %made symmetric and semi-positive definite
     c = inv(k_square + alpha*eye(size(k_square)))*m; %eq 29
     plot(c)
