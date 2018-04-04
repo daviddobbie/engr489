@@ -158,7 +158,7 @@ alpha = 100;
 
 
 
-c = ones(size(m));
+c = ones([trunc1*trunc2  1]);
 
 alpha_hist = [];
 
@@ -174,11 +174,15 @@ title('c_r vector changing at each iteration');
 
 %this is the method that prevents it being divergent
 for i=1:100
-    k_square = K0*K0'; 
-    %stepFnMatrix = (heaviside(K0'*c)).* eye(Nx,Ny);
-    %k_square = K0 *  stepFnMatrix * K0';       %recreate eq 30
+    %k_square = K0*K0'; 
+    stepFnMatrix = (heaviside(K0'*c))'.* eye(Nx*Ny);
+    k_square = K0 *stepFnMatrix * K0';       %recreate eq 30
     %made symmetric and semi-positive definite
-    c = inv(k_square + alpha*eye(size(k_square)))*m; %eq 29
+    
+    % =========> ERROR HERE
+    c = inv(k_square + alpha*eye(trunc1*trunc2))*m; %eq 29
+    % ===========
+    
     plot(c)
 
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
