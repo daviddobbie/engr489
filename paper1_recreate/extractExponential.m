@@ -25,8 +25,8 @@ Ny = 101;
 % NOTE that:
 %    N2 > trunc2 >= Ny
 %    N1 > trunc1 >= Nx
-trunc1=30;
-trunc2=100;
+trunc1=15;
+trunc2=25;
 
 tau1min = 1e-4;
 tau1max = 10;
@@ -160,6 +160,9 @@ alpha = 100;
 
 c = ones([trunc1*trunc2  1]);
 
+% lexiographical sorting of the m matrix
+mlex = sortrows(reshape(m,1,[]).');
+
 alpha_hist = [];
 
 figure(2)
@@ -173,14 +176,14 @@ title('c_r vector changing at each iteration');
 % alpha, this needs to be considered. Takes more effort!
 
 %this is the method that prevents it being divergent
-for i=1:100
+for i=1:20
     %k_square = K0*K0'; 
     stepFnMatrix = (heaviside(K0'*c))'.* eye(Nx*Ny);
     k_square = K0 *stepFnMatrix * K0';       %recreate eq 30
     %made symmetric and semi-positive definite
     
     % =========> ERROR HERE
-    c = inv(k_square + alpha*eye(trunc1*trunc2))*m; %eq 29
+    c = inv(k_square + alpha*eye(trunc1*trunc2))*mlex; %eq 29
     % ===========
     
     plot(c)
@@ -210,21 +213,22 @@ end
 %}
 f = K0'*c;
 
-var = K0'*((K0*K0' + alpha*eye(size(k_square)))^-2)*K0;
+f = reshape(f,Nx,Ny); %back to 2D representation
+%var = K0'*((K0*K0' + alpha*eye(size(k_square)))^-2)*K0;
 
 
 figure(3)
 clf
 hold on
 set(gca, 'XScale', 'log')
-plot(T2, 10.^(f)./2,'r')
+mesh(f)
 hold off
 legend("Density Function")
 title('Probability Density Function for T_2')
 ylabel('f(T_2)')
 xlabel('T_2')
 
-trapz(log10(T2), 10.^(f)./2)
+%trapz(log10(T2), 10.^(f)./2)
 
 figure(4)
 plot(alpha_hist)

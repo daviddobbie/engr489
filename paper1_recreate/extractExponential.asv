@@ -25,8 +25,8 @@ Ny = 101;
 % NOTE that:
 %    N2 > trunc2 >= Ny
 %    N1 > trunc1 >= Nx
-trunc1=30;
-trunc2=100;
+const trunc1=30;
+trunc2=50;
 
 tau1min = 1e-4;
 tau1max = 10;
@@ -159,6 +159,8 @@ alpha = 100;
 
 
 c = ones([trunc1*trunc2  1]);
+% lexiographical sorting of the m matrix
+mlex = reshape(m,1,[]).';
 
 alpha_hist = [];
 
@@ -173,12 +175,16 @@ title('c_r vector changing at each iteration');
 % alpha, this needs to be considered. Takes more effort!
 
 %this is the method that prevents it being divergent
-for i=1:100
+for i=1:20
     %k_square = K0*K0'; 
     stepFnMatrix = (heaviside(K0'*c))'.* eye(Nx*Ny);
-    k_square = K0 *  (stepFnMatrix * K0');       %recreate eq 30
+    k_square = K0 *stepFnMatrix * K0';       %recreate eq 30
     %made symmetric and semi-positive definite
-    c = inv(k_square + alpha*eye(trunc1*trunc2))*m; %eq 29
+    
+    % =========> ERROR HERE
+    c = inv(k_square + alpha*eye(trunc1*trunc2))*mlex; %eq 29
+    % ===========
+    
     plot(c)
 
     alpha =  sqrt(size(c,2)) / norm(c); %implement eq 41
@@ -204,16 +210,17 @@ for i=1:50
     
 end
 %}
-f = K0'*c;
+f = K0'*c';
 
-var = K0'*((K0*K0' + alpha*eye(size(k_square)))^-2)*K0;
+f = reshape
+%var = K0'*((K0*K0' + alpha*eye(size(k_square)))^-2)*K0;
 
 
 figure(3)
 clf
 hold on
 set(gca, 'XScale', 'log')
-plot(T2, 10.^(f)./2,'r')
+mesh(10.^(f)./2)
 hold off
 legend("Density Function")
 title('Probability Density Function for T_2')
