@@ -1,4 +1,5 @@
 %% David Dobbie
+% Victoria University of Wellington
 % Recreating paper 1 (Solving Fredholm Integrals of the first Kind With
 % Tensor Product Structure in 2 and 2.5 Dimensions)
 %
