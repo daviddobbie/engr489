@@ -3,7 +3,6 @@
 % Tensor Product Structure in 2 and 2.5 Dimensions)
 %
 % 1053-587X(02)03282-8
-% Venkataramanan et al Solving Fredholm Integrals of the First Kind . 2002
 
 %Aim: Extract the exponential time constants from a summation of several
 %       type of them.
@@ -26,8 +25,8 @@ Ny = 101;
 % NOTE that:
 %    N2 > trunc2 >= Ny
 %    N1 > trunc1 >= Nx
-trunc1=15;
-trunc2=25;
+const trunc1=30;
+trunc2=50;
 
 tau1min = 1e-4;
 tau1max = 10;
@@ -160,9 +159,8 @@ alpha = 100;
 
 
 c = ones([trunc1*trunc2  1]);
-
 % lexiographical sorting of the m matrix
-mlex = sortrows(reshape(m,1,[]).');
+mlex = reshape(m,1,[]).';
 
 alpha_hist = [];
 
@@ -212,9 +210,9 @@ for i=1:50
     
 end
 %}
-f = K0'*c;
+f = K0'*c';
 
-f = reshape(f,Nx,Ny); %back to 2D representation
+f = reshape
 %var = K0'*((K0*K0' + alpha*eye(size(k_square)))^-2)*K0;
 
 
@@ -222,14 +220,14 @@ figure(3)
 clf
 hold on
 set(gca, 'XScale', 'log')
-mesh(f)
+mesh(10.^(f)./2)
 hold off
 legend("Density Function")
 title('Probability Density Function for T_2')
 ylabel('f(T_2)')
 xlabel('T_2')
 
-%trapz(log10(T2), 10.^(f)./2)
+trapz(log10(T2), 10.^(f)./2)
 
 figure(4)
 plot(alpha_hist)
