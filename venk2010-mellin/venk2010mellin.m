@@ -13,8 +13,7 @@ close all
 clc
 clf
 clear all
-
-set(1,'defaultTextInterpreter','latex');
+set(0,'defaultTextInterpreter','latex');
 
 %% init variables
 % number of data points in each dimension
@@ -84,5 +83,46 @@ xlabel('$Data points$')
 ylabel('$M_{compressed}(t)$')
 title('Compressed Simulated Noisy Data M(t), $\sigma=0.2$');
 
+mellinTransform(M_comp, 1, tE, 1, 0.001 ,n_stddev)
+
+%% function definitions:
+
+% Discretised Mellin transform. Assumes that m is discretised along tE
+% sample interval
+% INPUTS: 
+%    m = N x 1 measurement vector
+%    omega = the omega-th moment being calculated
+%    tE = sample interval of m
+%    poro = porosity (linear scaling function for mean)
+% OUTPUTS:
+%    the T2 moment
+%    variance of T2 moment
+function [moment, var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
+        N = length(m);
+    if omega==0
+        moment = 1;
+    elseif omega > 0
+        tau_min = tE^omega; %eq 19a
+        k = tau_min/gamma(omega+1); %eq 19a
+        
+        i = 2:1:N-1;
+        
+        % eq 19c-e
+        delta = 0.5*tau_min.*((i+1).^omega - (i-1).^omega);
+        delta = [0.5*tau_min(2^omega-1^omega) delta 0.5*tau_min*(N^omega-(N-1)^omega)];
+        
+        moment = 1/(gamma(omega + 1)*poro) * delta*m; % eq18
+        
+        %eq 23
+        var = (delta.^2)*(delta.^2)'/(gamma(omega+1))^2*(sigma_n/poro)^2;
+        var= var + (moment - k)^2*(sigma_p/poro)^2;
+    elseif -1 < omega < 0
+            
+    end
+end
 
 
+% Estimates the porosity and its uncertainty - correlates to area under T2
+% dist.
+function [poro, poro_uncert] = calcPorosity();
+end
