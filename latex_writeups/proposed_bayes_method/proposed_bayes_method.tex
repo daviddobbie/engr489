@@ -1,0 +1,47 @@
+\documentclass[]{article}
+
+%opening
+\title{Proposed Bayesian Estimation Method for T2 Relaxation Times from measurement data.}
+\author{David Dobbie}
+
+\begin{document}
+
+\maketitle
+
+
+\section*{}
+\paragraph{}
+Given a set of measured data - $\textbf{x}$, we seek to determine the T2 relaxation times that are present in it. With this we have $\theta(T_2)$, our distribution function of T2 values. This means we can use Bayes' theorem (eq. \ref{eq:bayesThm}) to find the likely distribution of x's T2 relaxation times given that we know the measurement we would likely get for a speicifc T2 distribution $\theta(T_2)$.
+
+\begin{equation}
+P(\theta|\textbf{x}) = \frac{P(\theta)P(\textbf{x}|\theta)}{P(\textbf{x})}
+\label{eq:bayesThm}
+\end{equation}
+
+\paragraph{}
+The individual parts of this crucial rule are as follows:
+\begin{itemize}
+	\item $ P(\theta) $ is the likeliness of what distribution we will get i.e. what rock we get.
+	\item $ P(\textbf{x}|\theta(T_2))$ is the chance that given a specific T2 relaxation time distirbution, we would get the measured data, \textbf{x}
+	\item $ P(\theta(T_2) | \textbf{x}) $ is the distirbution of our T2 relaxation times given what we've measured with \textbf{x}. This is the genuine result we want.
+\end{itemize}
+
+\paragraph{}
+	The important part to construct is the priori, $ P(\textbf{x}|\theta(T_2)) $. To do this we need to provide the a high SNR example of x to construct this and a proper $ \theta(T_2) $. To construct this we can use eq. \ref{eq:formEstMeasured}. This equation uses a expontial kernel K for the shape of our sample and multiplies it with a density function ($ f(T_2) $) of T2 relaxation times. In a high SNR environment, we have a very accurate density function that we can use to construct the estimated $ \hat{\textbf{x}} $. We would form a series of these estimate measured data in a controlled environment outside of the use case.
+
+	\begin{equation}
+	\hat{\textbf{x}} = Kf(T_2)
+	\label{eq:formEstMeasured}
+	\end{equation}
+	
+\paragraph{}
+	Now we want a numerical value to give us the closeness of our data with the set of hypothesies given to us. In order to do that, we require construct $ P(\textbf{x}|\theta(T_2)) $ as a Gaussian distribution since we are looking for the probability that our actual \textbf{x} has a certain T2 relaxation distriubution generated from $ \hat{\textbf{x}} $. This can be done in the form of a multivariate Gaussian with $ \textbf{x} - \hat{\textbf{x}} = \textbf{x} - Kf(T_2) $ as the mean. This means that the more closer our hypothesis is to our measured data, the less bias there is and the higher our symbol is.
+
+\paragraph{}
+	With our weighting formed, we can create our $ P(\theta|\textbf{x}) $ density T2 distribution for the specific measured data. This can be done by forming a series of delta functions in the continuous space offset by the T2 times available \ref{eq:T2Delta} (where $ \mathcal{N}(0, \sigma_\epsilon $ with noise standard deviation) is our non shifted Gaussian function. The set of weighted dirac functions can be convoluted with the Gaussian to give us a continuous function we can interpolate from. This allows us to create a distribution of T2 times specially for our current measured data using previous information in a high SNR environment. This would allow for a low SNR measurement to use high SNR data to construct the T2 distribution.
+	
+	\begin{equation}
+		\hat{\theta}(T_2) = \sum_{n = 0}^{N} w_n\delta(\tau_2 - T2_n) * \mathcal{N}(0, \sigma_\epsilon)
+		\label{eq:T2Delta}
+	\end{equation}
+\end{document}
