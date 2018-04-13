@@ -37,7 +37,7 @@ T2_mean = 0.1;
 T2_var = 0.1;
 
 % normal dist answer
-f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/400;
+%f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/400;
 
 %delta distribut
 f_answer = zeros(Ny,1);
@@ -94,14 +94,14 @@ mom = mellinTransform(M_comp, 1, tE, porosity_answer, 0.001 ,n_stddev);
 
 % use G(omega) = ln<(T_2)^omega>, plot it
 
-omega_axis = linspace(0,1,100);
+omega_axis = linspace(-1,1,200);
 
 result_axis = [];
 
 for omg = omega_axis
-    mom = mellinTransform(M_comp, omg, tE, porosity_answer, 0.001 ,n_stddev);
+    mom = mellinTransform(M, omg, tE, porosity_answer, 0.001 ,n_stddev);
     
-    result_axis = [result_axis mom];
+    result_axis = [result_axis log(mom)];
     
 end 
 
@@ -126,7 +126,7 @@ ylabel("$G(\omega)$ Mellin transform of data")
 %    variance of T2 moment
 function [moment] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         N = length(m);
-    if omega==0.0
+    if omega==0
         moment = 0;
     elseif omega > 0
         tau_min = tE^omega; %eq 19a
@@ -148,7 +148,7 @@ function [moment] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         var = (delta.^2)*(delta.^2)'/(gamma(omega+1))^2*(sigma_n/poro)^2;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         return;
-    elseif -1 < omega < 0 %implement eq 22
+    elseif -1 <= omega && omega < 0  %implement eq 22
         
         tau_min = tE^omega; %eq 19a
         k = tau_min/gamma(omega+1); %eq 19a 
@@ -156,11 +156,19 @@ function [moment] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         I = 2:1:N-1;
         delta = [];
+        delta = 0.5*tau_min*((I+1).^omega - (I-1).^omega);
         delta_0 = (0.5*tau_min*(2^omega-1^omega));
-        delta_N = (0.5*tau_min*(N^omega-(N-1)^omega));
+        delta_N = 0.5*tau_min*(N.^omega-(N-1).^omega);
         delta = [delta_0 delta delta_N];  
         
+        a1 = (m(2) - m(1))/(tE); % gradient of m at t = approx
         
+        const = a1*omega/(omega+1)*tau_min^((omega+1)/omega);
+        
+        moment = k + 1/(gamma(omega + 1)*poro)*(const + delta*m);
+        return;
+    else %allows outside case, shouldn't be called
+        moment = 0;
     end
 end
 
