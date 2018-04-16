@@ -94,24 +94,41 @@ mom = mellinTransform(M_comp, 1, tE, porosity_answer, 0.001 ,n_stddev);
 
 % use G(omega) = ln<(T_2)^omega>, plot it
 
-omega_axis = linspace(-1,1,200);
+omega_axis = linspace(-0.99,1,51)';
 
-result_axis = [];
+result_axis = zeros(length(omega_axis), 2);
+J = [];
+Sigma_G = eye(length(omega_axis));
+indx_covar_mat = 1;
 
-for omg = omega_axis
-    mom = mellinTransform(M, omg, tE, porosity_answer, 0.001 ,n_stddev);
+
+for inx = 1:length(omega_axis)
+    omg = omega_axis(inx);
+    [mom var] = mellinTransform(M_comp, omg, tE, porosity_answer, 0.001 ,n_stddev);
+    J = [J 1/mom];
     
-    result_axis = [result_axis log(mom)];
+    Sigma_G(indx_covar_mat,indx_covar_mat) = var;
+    
+    result_axis(indx_covar_mat,:) = [ [log(mom)  log(var)]];
+    
+    indx_covar_mat = indx_covar_mat +1; 
     
 end 
 
+G_covar = J * Sigma_G * J';
 
 figure(4)
-
-plot(omega_axis, result_axis)
+plot(omega_axis, result_axis(:,1))
 xlabel("$\omega^{th}$ moment")
 ylabel("$G(\omega)$ Mellin transform of data")
+title("$ G(\omega) \equiv ln \langle T_2^\omega \rangle $")
 
+%quadratic fit on Mellin transform
+coeffc = polyfit(omega_axis, result_axis(:,1), 2);
+var_lnT2 = coeffc(1)/2
+moment_lnT2 = coeffc(2)
+
+momentT2 = exp(moment_lnT2)
 %% function definitions:
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
@@ -124,28 +141,30 @@ ylabel("$G(\omega)$ Mellin transform of data")
 % OUTPUTS:
 %    the T2 moment
 %    variance of T2 moment
-function [moment] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
+function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         N = length(m);
+        
     if omega==0
-        moment = 0;
+        moment = 1;
+        var = 0;
     elseif omega > 0
         tau_min = tE^omega; %eq 19a
         k = tau_min/gamma(omega+1); %eq 19a
         
-        I = 2:1:N-1;
+        n = 2:1:N-1;
         
         % eq 19c-e
         delta = [];
-        delta = 0.5*tau_min*((I+1).^omega - (I-1).^omega);
+        delta = 0.5*tau_min*((n+1).^omega - (n-1).^omega);
         delta_0 = (0.5*tau_min*(2^omega-1^omega));
         delta_N = (0.5*tau_min*(N^omega-(N-1)^omega));
         delta = [delta_0 delta delta_N];
         %delta = [(0.5*tau_min(2.^omega-1.^omega)) delta (0.5*tau_min*(N.^omega-(N-1).^omega))];
         
-        moment = 1/(gamma(omega + 1)*poro) * delta*m; % eq18
+        moment = k+ 1/(gamma(omega + 1)*poro) * delta*m; % eq18
         
         %eq 23
-        var = (delta.^2)*(delta.^2)'/(gamma(omega+1))^2*(sigma_n/poro)^2;
+        var = ((delta.^2)*(delta.^2)'/gamma(omega+1)^2)*(sigma_n/poro)^2;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         return;
     elseif -1 <= omega && omega < 0  %implement eq 22
@@ -163,12 +182,19 @@ function [moment] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         a1 = (m(2) - m(1))/(tE); % gradient of m at t = approx
         
+        a1_stddev = 0; %standard deviation of slope
+        
         const = a1*omega/(omega+1)*tau_min^((omega+1)/omega);
         
         moment = k + 1/(gamma(omega + 1)*poro)*(const + delta*m);
+        
+        var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2;
+        var= var + (moment - k)^2*(sigma_p/poro)^2;
+        var = var + ((omega*tau_min^((omega+1)/omega))/gamma(omega + 2)) * (a1_stddev / poro)^2;
         return;
     else %allows outside case, shouldn't be called
         moment = 0;
+        var = 0;
     end
 end
 
