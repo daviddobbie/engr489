@@ -22,7 +22,7 @@ N2 = 5000;
 Ny = 1000;      
 %sets how many singular values we compress to
 sing_val=20; %no singular values
-tE = 500e-6; % sample interval
+tE = 500*10^-6; % sample interval
 T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
@@ -33,15 +33,15 @@ K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation data kernel
 %recreation of MODEL D pg 26
 
 %generate the density fn
-T2_mean = 0.1;
-T2_var = 0.1;
+T2_mean = 0.3;
+T2_var = 0.05;
 
 % normal dist answer
-%f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/400;
+f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/400;
 
 %delta distribut
-f_answer = zeros(Ny,1);
-f_answer(600) = 10;
+%f_answer = zeros(Ny,1);
+%f_answer(500) = 1;
 
 figure(1)
 plot(T2, f_answer);
@@ -53,7 +53,7 @@ title('Correct Density Function of $T_2$');
 
 % generate measured data from density function
 
-n_stddev = 0.1;
+n_stddev = 0.2;
 n = normrnd(0,n_stddev,[N2,1]);
 
 M = K2*f_answer + n ;
@@ -92,11 +92,11 @@ title('Compressed Simulated Noisy Data M(t), $\sigma_{\epsilon}=0.2$');
 
 porosity_answer = trapz(f_answer)
 
-mom = mellinTransform(M_comp, 1, tE, porosity_answer, 0.001 ,n_stddev);
+%mom = mellinTransform(M_comp, 1, tE, porosity_answer, 0.001 ,n_stddev);
 
 % use G(omega) = ln<(T_2)^omega>, plot it
 
-omega_axis = linspace(-0.5,1,30)';
+omega_axis = linspace(-0.5,1,300)';
 
 result_axis = zeros(length(omega_axis), 2);
 J = zeros(1, length(omega_axis));
@@ -111,7 +111,7 @@ for inx = 1:length(omega_axis)
     
     Sigma_G(indx_covar_mat,indx_covar_mat) = var;
     
-    result_axis(indx_covar_mat,:) = [log(mom)  var];
+    result_axis(indx_covar_mat,:) = [log(mom + exp(1))  var];
     
     indx_covar_mat = indx_covar_mat +1; 
     
@@ -119,7 +119,7 @@ end
 
 G_covar = J * Sigma_G * J';
 
-[omega_axis result_axis(:,1)]
+[omega_axis result_axis(:,1)];
 
 figure(4)
 plot(omega_axis, result_axis(:,1))
@@ -128,11 +128,12 @@ ylabel("$G(\omega)$ Mellin transform of data")
 title("$ G(\omega) \equiv ln \langle T_2^\omega \rangle $")
 
 %quadratic fit on Mellin transform (2nd order polynomial)
-coeffc = polyfit(omega_axis, result_axis(:,1), 2);
+coeffc = polyfit(omega_axis, real(result_axis(:,1)), 2);
 var_lnT2 = coeffc(1)/2
 moment_lnT2 = coeffc(2)
 
 momentT2 = exp(moment_lnT2)
+varT2 = exp(var_lnT2)
 %% function definitions:
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
@@ -158,18 +159,17 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         n = 2:1:N-1;
         
         % eq 19c-e
-        delta = [];
-        delta = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
         delta_1 = (0.5 * tau_min * (2^omega - 1^omega) );
+        delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
         delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
-        delta = [delta_1 delta delta_N];
+        delta = [delta_1 delta_mid delta_N];
         %delta = [(0.5*tau_min(2.^omega-1.^omega)) delta (0.5*tau_min*(N.^omega-(N-1).^omega))];
         
         %omega
         
         % note that erroneous values are apparent for a negative
         % measurement (leads to complex result from log)
-        moment = k + 1/(gamma(omega + 1)*poro) * delta*m; % eq18
+        moment = k + 1/(gamma(omega + 1)*poro) * (delta*m); % eq18
         
         %eq 23
         var = ((delta.^2)*(delta.^2)'/gamma(omega+1)^2)*(sigma_n/poro)^2;
@@ -182,17 +182,16 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         
         n = 2:1:N-1;
-        delta = [];
-        delta = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
-        delta_1 = (0.5 * tau_min * (2^omega - 1^omega));
-        delta_N = 0.5 * tau_min * (N.^omega - (N-1).^omega);
-        delta = [delta_1 delta delta_N];  
+        delta_1 = (0.5 * tau_min * (2^omega - 1^omega) );
+        delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
+        delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
+        delta = [delta_1 delta_mid delta_N];
         
-        a1 = (m(2) - m(1))/(tE); % gradient of m at t = approx
+        a1 = (m(2) - m(1))/(tE); % gradient of m at t=0 approximation
         
         a1_stddev = 0; %standard deviation of slope
         
-        const = (a1*omega/(omega+1)) * tau_min^((omega+1)/omega);
+        const = ((a1*omega) / (omega+1)) * tau_min^((omega+1)/omega);
         
         moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);
         
