@@ -33,8 +33,8 @@ K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation data kernel
 %recreation of MODEL D pg 26
 
 %generate the density fn
-T2_mean = 0.3;
-T2_var = 0.05;
+T2_mean = 0.1;
+T2_var = 0.04;
 
 % normal dist answer
 f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/400;
@@ -106,12 +106,13 @@ indx_covar_mat = 1;
 
 for inx = 1:length(omega_axis)
     omg = omega_axis(inx);
-    [mom var] = mellinTransform(M_comp, omg, tE * (Ny/sing_val), porosity_answer, 0.001 ,n_stddev);
+    % certain about porosity
+    [mom var] = mellinTransform(M, omg, tE , porosity_answer, 0.001 ,n_stddev);
     J(indx_covar_mat) = 1/mom;
     
     Sigma_G(indx_covar_mat,indx_covar_mat) = var;
     
-    result_axis(indx_covar_mat,:) = [log(mom + exp(1))  var];
+    result_axis(indx_covar_mat,:) = [log(mom)  var];
     
     indx_covar_mat = indx_covar_mat +1; 
     
@@ -122,18 +123,24 @@ G_covar = J * Sigma_G * J';
 [omega_axis result_axis(:,1)];
 
 figure(4)
-plot(omega_axis, result_axis(:,1))
+
+r_a = result_axis(:,1);
+
+plot(omega_axis(~isnan(r_a)), r_a(~isnan(r_a)))
 xlabel("$\omega^{th}$ moment")
 ylabel("$G(\omega)$ Mellin transform of data")
 title("$ G(\omega) \equiv ln \langle T_2^\omega \rangle $")
 
 %quadratic fit on Mellin transform (2nd order polynomial)
-coeffc = polyfit(omega_axis, real(result_axis(:,1)), 2);
+
+
+
+coeffc = polyfit(omega_axis(~isnan(r_a)), r_a(~isnan(r_a)), 2);
 var_lnT2 = coeffc(1)/2
 moment_lnT2 = coeffc(2)
 
 momentT2 = exp(moment_lnT2)
-varT2 = exp(var_lnT2)
+varT2 = momentT2 * var_lnT2
 %% function definitions:
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
@@ -171,11 +178,21 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         % measurement (leads to complex result from log)
         moment = k + 1/(gamma(omega + 1)*poro) * (delta*m); % eq18
         
+        if moment < 1e-1 % computation breaks, is negative
+            k
+            disp('delta * m')
+            (delta*m)
+            disp('1/gamma(omg + 1)')
+            1/(gamma(omega + 1)*poro)
+            moment = NaN;
+        end
+            
+        
         %eq 23
         var = ((delta.^2)*(delta.^2)'/gamma(omega+1)^2)*(sigma_n/poro)^2;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         return;
-    elseif -1 <= omega && omega < 0  %implement eq 22
+    elseif -1 < omega && omega < 0  %implement eq 22
         
         tau_min = tE^omega; %eq 19a
         k = tau_min/gamma(omega+1); %eq 19a 
@@ -195,6 +212,16 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);
         
+        
+        if moment < 1e-1 % computation breaks, is negative
+            k
+            disp('delta * m')
+            (delta*m)
+            disp('1/gamma(omg + 1)')
+            1/(gamma(omega + 1)*poro)
+            moment = NaN;
+        end
+        
         var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         var = var + ((omega*tau_min^((omega+1)/omega))/gamma(omega + 2)) * (a1_stddev / poro)^2;
@@ -204,6 +231,14 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         var = 0;
     end
 end
+
+function [moment var] = meanAndVarEstimation()
+
+
+
+end
+
+
 
 
 % Estimates the porosity and its uncertainty - correlates to area under T2
