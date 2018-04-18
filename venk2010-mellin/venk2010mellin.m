@@ -141,6 +141,17 @@ moment_lnT2 = coeffc(2)
 
 momentT2 = exp(moment_lnT2)
 varT2 = momentT2 * var_lnT2
+
+N_histleng = 10;
+
+hist_data = zeros(N_histleng,2);
+
+for hist_indx = 1:N_histleng
+    hist_data(hist_indx,:) =  meanAndVarEstimation();
+end
+
+figure(5)
+histogram(hist_data(1,:),3)
 %% function definitions:
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
@@ -232,10 +243,105 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
     end
 end
 
-function [moment var] = meanAndVarEstimation()
+function [momentT2, varT2] = meanAndVarEstimation()
 
 
+%% init variables
+% number of data points in each dimension
+N2 = 5000;
+% number of bins in relaxation time grids
+Ny = 1000;      
+%sets how many singular values we compress to
+sing_val=20; %no singular values
+tE = 500*10^-6; % sample interval
+T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
+%forms measurement arrays, time tau1 and tau2 domains
+tau2 = (1:N2)'*tE;  
 
+K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation data kernel
+
+
+%recreation of MODEL D pg 26
+
+%generate the density fn
+T2_mean = 0.1;
+T2_var = 0.04;
+
+% normal dist answer
+f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/400;
+
+%delta distribut
+%f_answer = zeros(Ny,1);
+%f_answer(500) = 1;
+
+% generate measured data from density function
+
+n_stddev = 0.2;
+n = normrnd(0,n_stddev,[N2,1]);
+
+M = K2*f_answer + n ;
+
+% compression of the measurment data for computation
+[U2, S2, V2] = svd(K2);
+
+if sing_val < Ny
+    S2c = S2(1:sing_val,1:sing_val);
+    U2c = U2(:,1:sing_val);
+    V2c = V2(:,1:sing_val);
+else
+    S2c = S2(1:sing_val,:);
+    U2c = U2(:,1:sing_val);
+    V2c = V2(:,:);
+end
+
+%set new compressed kernels
+K2 = S2c*V2c';
+M_comp = (U2c'*M);
+
+porosity_answer = trapz(f_answer)
+
+%mom = mellinTransform(M_comp, 1, tE, porosity_answer, 0.001 ,n_stddev);
+
+% use G(omega) = ln<(T_2)^omega>, plot it
+
+omega_axis = linspace(-0.5,1,300)';
+
+result_axis = zeros(length(omega_axis), 2);
+J = zeros(1, length(omega_axis));
+Sigma_G = eye(length(omega_axis));
+indx_covar_mat = 1;
+
+
+for inx = 1:length(omega_axis)
+    omg = omega_axis(inx);
+    % certain about porosity
+    [mom var] = mellinTransform(M, omg, tE , porosity_answer, 0.001 ,n_stddev);
+    J(indx_covar_mat) = 1/mom;
+    
+    Sigma_G(indx_covar_mat,indx_covar_mat) = var;
+    
+    result_axis(indx_covar_mat,:) = [log(mom)  var];
+    
+    indx_covar_mat = indx_covar_mat +1; 
+    
+end 
+
+G_covar = J * Sigma_G * J';
+
+[omega_axis result_axis(:,1)];
+
+figure(4)
+
+r_a = result_axis(:,1);
+%quadratic fit on Mellin transform (2nd order polynomial)
+
+coeffc = polyfit(omega_axis(~isnan(r_a)), r_a(~isnan(r_a)), 2);
+var_lnT2 = coeffc(1)/2;
+moment_lnT2 = coeffc(2);
+
+momentT2 = exp(moment_lnT2);
+varT2 = momentT2 * var_lnT2;
+return;
 end
 
 
