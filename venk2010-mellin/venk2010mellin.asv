@@ -52,11 +52,11 @@ title('Correct Density Function of $T_2$');
 
 % generate measured data from density function
 
-n_stddev = 0.2;
+n_stddev = 0.02;
 porosity = trapz(f_answer);
 n_stddev = n_stddev * porosity
 
-N_histleng = 1024;
+N_histleng = 1;
 
 hist_data = zeros(N_histleng,2);
 for hist_indx = 1:N_histleng
@@ -147,11 +147,11 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
         delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
         delta = [delta_1 delta_mid delta_N];
-        %{
+
             hold on
             plot (delta)
             hold off
-        %} 
+        
         
         %estimate 1st derivate of M at 0 with polyfit
         coeffc = polyfit(1:50, m(1:50)', 1);
@@ -194,7 +194,7 @@ end
 
 
 function [momentT2, varT2] = meanAndVarEstimation(N2, Ny, sing_val, tE, f_answer, n_stddev)
-DEBUG = 0;
+DEBUG = 1;
 T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
@@ -215,17 +215,16 @@ end
 
 % compression of the measurment data for computation
 [U2, S2, V2] = svd(M);
-
-S2c = zeros(size(S2));
+S2C = zeros(size()
 if sing_val < Ny
-    S2c(1:sing_val,1) = S2(1:sing_val,1);
+    S2c = S2(1:sing_val,1:sing_val);
 else
-    S2c(1:sing_val,1) = S2(1:sing_val,1);
+    S2c = S2(1:sing_val,:);
 
 end
 
 %set new compressed kernels
-M_comp = (U2*S2c*V2');
+M_comp = (U2*S2C*V2');
 
 if DEBUG
     figure(3)
@@ -248,12 +247,9 @@ J = zeros(1, length(omega_axis));
 Sigma_G = eye(length(omega_axis));
 indx_covar_mat = 1;
 
-% printing the index for delta vector
-%{
 figure(66)
 xlabel("index - i")
 ylabel("$\Delta_i$ values")
-%}
 
 for inx = 1:length(omega_axis)
     omg = omega_axis(inx);
@@ -268,7 +264,7 @@ for inx = 1:length(omega_axis)
     indx_covar_mat = indx_covar_mat +1; 
     
 end 
-
+legend('1', '2')
 G_covar = J * Sigma_G * J';
 
 [omega_axis result_axis(:,1)];
