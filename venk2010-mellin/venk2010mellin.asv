@@ -52,11 +52,11 @@ title('Correct Density Function of $T_2$');
 
 % generate measured data from density function
 
-n_stddev = 0.02;
+n_stddev = 0.2;
 porosity = trapz(f_answer);
 n_stddev = n_stddev * porosity
 
-N_histleng = 1;
+N_histleng = 50;
 
 hist_data = zeros(N_histleng,2);
 for hist_indx = 1:N_histleng
@@ -66,15 +66,23 @@ for hist_indx = 1:N_histleng
 end
 figure(5)
 h1 = histogram(hist_data(:,1), 25)
+
+estmean_menmean(hist_data(:,1))
+median(hist_data(:,1))
+
 xlabel('$T_{2,LM}$ Mellin Transfom (sec)')
 ylabel('Frequency')
-title('Mellin Transform Extraction $T_2$ Relaxation Times')
+title('Mellin Transform Estimated  $\langle T_2 \rangle$ Relaxation Times')
 
 figure(6)
 h2 = histogram(hist_data(:,2), 25)
+
+mean(hist_data(:,2))
+median(hist_data(:,2))
+
 xlabel('$\sigma^{2}_{log_{10} T_2}$ Mellin Transfom (sec)')
 ylabel('Frequency')
-title('Mellin Transform Extraction $T_2$ variance Relaxation Times')
+title('Mellin Transform Estimated $\sigma^{2}_{log_{10} \langle T_2 \rangle}$ variance Relaxation Times')
 %% function definitions:
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
@@ -147,14 +155,14 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
         delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
         delta = [delta_1 delta_mid delta_N];
-
+        %{
             hold on
             plot (delta)
             hold off
-        
+        %} 
         
         %estimate 1st derivate of M at 0 with polyfit
-        coeffc = polyfit(1:50, m(1:50)', 1);
+        coeffc = polyfit(1:20, m(1:20)', 1);
         a1 = coeffc(1)/tE;
         %a1 = (m(2) - m(1))/(tE); % gradient of m at t=0 approximation
         
@@ -194,7 +202,7 @@ end
 
 
 function [momentT2, varT2] = meanAndVarEstimation(N2, Ny, sing_val, tE, f_answer, n_stddev)
-DEBUG = 1;
+DEBUG = 0;
 T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
@@ -215,16 +223,17 @@ end
 
 % compression of the measurment data for computation
 [U2, S2, V2] = svd(M);
-S2C = zeros(size()
+
+S2c = zeros(size(S2));
 if sing_val < Ny
-    S2c = S2(1:sing_val,1:sing_val);
+    S2c(1:sing_val,1) = S2(1:sing_val,1);
 else
-    S2c = S2(1:sing_val,:);
+    S2c(1:sing_val,1) = S2(1:sing_val,1);
 
 end
 
 %set new compressed kernels
-M_comp = (U2*S2C*V2');
+M_comp = (U2*S2c*V2');
 
 if DEBUG
     figure(3)
@@ -240,16 +249,19 @@ porosity_answer = trapz(f_answer);
 
 % use G(omega) = ln<(T_2)^omega>, plot it
 
-omega_axis = linspace(-0.5,1,30)';
+omega_axis = linspace(-0.3,1,30)';
 
 result_axis = zeros(length(omega_axis), 2);
 J = zeros(1, length(omega_axis));
 Sigma_G = eye(length(omega_axis));
 indx_covar_mat = 1;
 
+% printing the index for delta vector
+%{
 figure(66)
 xlabel("index - i")
 ylabel("$\Delta_i$ values")
+%}
 
 for inx = 1:length(omega_axis)
     omg = omega_axis(inx);
@@ -264,7 +276,7 @@ for inx = 1:length(omega_axis)
     indx_covar_mat = indx_covar_mat +1; 
     
 end 
-legend('1', '2')
+
 G_covar = J * Sigma_G * J';
 
 [omega_axis result_axis(:,1)];

@@ -32,8 +32,8 @@ tau2 = (1:N2)'*tE;
 %recreation of MODEL D pg 26
 
 %generate the density fn
-T2_mean = 0.3;
-T2_var = 0.2;
+T2_mean = 0.3
+T2_var = 0.2
 
 % normal dist answer
 f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/1700;
@@ -56,7 +56,7 @@ n_stddev = 0.2;
 porosity = trapz(f_answer);
 n_stddev = n_stddev * porosity
 
-N_histleng = 1024;
+N_histleng = 50;
 
 hist_data = zeros(N_histleng,2);
 for hist_indx = 1:N_histleng
@@ -66,15 +66,23 @@ for hist_indx = 1:N_histleng
 end
 figure(5)
 h1 = histogram(hist_data(:,1), 25)
+
+estmean_avg = mean(hist_data(:,1))
+estmean_med = median(hist_data(:,1))
+
 xlabel('$T_{2,LM}$ Mellin Transfom (sec)')
 ylabel('Frequency')
-title('Mellin Transform Extraction $T_2$ Relaxation Times')
+title('Mellin Transform Estimated  $\langle T_2 \rangle$ Relaxation Times')
 
 figure(6)
 h2 = histogram(hist_data(:,2), 25)
+
+estvar_avg = mean(hist_data(:,2))
+estvar_med = median(hist_data(:,2))
+
 xlabel('$\sigma^{2}_{log_{10} T_2}$ Mellin Transfom (sec)')
 ylabel('Frequency')
-title('Mellin Transform Extraction $T_2$ variance Relaxation Times')
+title('Mellin Transform Estimated $\sigma^{2}_{log_{10} \langle T_2 \rangle}$ variance Relaxation Times')
 %% function definitions:
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
@@ -154,8 +162,8 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         %} 
         
         %estimate 1st derivate of M at 0 with polyfit
-        coeffc = polyfit(1:50, m(1:50)', 1);
-        a1 = coeffc(1)/tE;
+        coeffc = polyfit(1:200, m(1:200)', 1);
+        a1 = (coeffc(1))/(tE);
         %a1 = (m(2) - m(1))/(tE); % gradient of m at t=0 approximation
         
         a1_stddev = 0; %standard deviation of slope
