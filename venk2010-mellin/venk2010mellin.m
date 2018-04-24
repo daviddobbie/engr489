@@ -38,6 +38,11 @@ T2_var = 0.2
 % normal dist answer
 f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/1700;
 
+porosity = trapz(f_answer);
+
+f_answer = f_answer./porosity; % normalise to unity porosity
+
+porosity = 1;
 %delta distribut
 %f_answer = zeros(Ny,1);
 %f_answer(500) = 1;
@@ -53,10 +58,8 @@ title('Correct Density Function of $T_2$');
 % generate measured data from density function
 
 n_stddev = 0.2;
-porosity = trapz(f_answer);
-n_stddev = n_stddev * porosity
 
-N_histleng = 50;
+N_histleng = 200;
 
 hist_data = zeros(N_histleng,2);
 for hist_indx = 1:N_histleng
@@ -97,6 +100,8 @@ title('Mellin Transform Estimated $\sigma^{2}_{log_{10} \langle T_2 \rangle}$ va
 %    variance of T2 moment
 function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         N = length(m);
+       
+        
         
     if omega==0
         moment = 1;
@@ -147,6 +152,12 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         return;
     elseif -1 < omega && omega < 0  %implement eq 22
         
+        for indx = 1:2;
+            if m(indx) > 1;
+               m(indx) = 1;
+            end
+        end
+        
         tau_min = tE^omega; %eq 19a
         k = tau_min/gamma(omega+1); %eq 19a 
         
@@ -162,7 +173,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         %} 
         
         %estimate 1st derivate of M at 0 with polyfit
-        coeffc = polyfit(1:200, m(1:200)', 1);
+        coeffc = polyfit(1:100, m(1:100)', 1);
         a1 = (coeffc(1))/(tE);
         %a1 = (m(2) - m(1))/(tE); % gradient of m at t=0 approximation
         
@@ -172,9 +183,14 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);
         
+
+        
         if moment < 1e-1
            disp('OMEGA CAUSED ERROR'); 
-           omega
+        const + delta*m
+        const
+        delta*m
+        omega
         end
         
         
@@ -213,6 +229,8 @@ n = n_stddev*normrnd(0,1,[N2,1]);
 
 M = K2*f_answer + n;
 %M = M .* heaviside(M);
+
+
 if DEBUG
     figure(2)
     plot (tau2, M);

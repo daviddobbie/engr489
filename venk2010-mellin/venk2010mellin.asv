@@ -32,12 +32,17 @@ tau2 = (1:N2)'*tE;
 %recreation of MODEL D pg 26
 
 %generate the density fn
-T2_mean = 0.3;
-T2_var = 0.2;
+T2_mean = 0.3
+T2_var = 0.2
 
 % normal dist answer
 f_answer = normpdf(log10(T2), log10(T2_mean), T2_var)'/1700;
 
+porosity = trapz(f_answer);
+
+f_answer = f_answer./porosity; % normalise to unity porosity
+
+porosity = 1;
 %delta distribut
 %f_answer = zeros(Ny,1);
 %f_answer(500) = 1;
@@ -53,8 +58,6 @@ title('Correct Density Function of $T_2$');
 % generate measured data from density function
 
 n_stddev = 0.2;
-porosity = trapz(f_answer);
-n_stddev = n_stddev * porosity
 
 N_histleng = 50;
 
@@ -67,8 +70,8 @@ end
 figure(5)
 h1 = histogram(hist_data(:,1), 25)
 
-estmean_menmean(hist_data(:,1))
-median(hist_data(:,1))
+estmean_avg = mean(hist_data(:,1))
+estmean_med = median(hist_data(:,1))
 
 xlabel('$T_{2,LM}$ Mellin Transfom (sec)')
 ylabel('Frequency')
@@ -77,8 +80,8 @@ title('Mellin Transform Estimated  $\langle T_2 \rangle$ Relaxation Times')
 figure(6)
 h2 = histogram(hist_data(:,2), 25)
 
-mean(hist_data(:,2))
-median(hist_data(:,2))
+estvar_avg = mean(hist_data(:,2))
+estvar_med = median(hist_data(:,2))
 
 xlabel('$\sigma^{2}_{log_{10} T_2}$ Mellin Transfom (sec)')
 ylabel('Frequency')
@@ -97,6 +100,10 @@ title('Mellin Transform Estimated $\sigma^{2}_{log_{10} \langle T_2 \rangle}$ va
 %    variance of T2 moment
 function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         N = length(m);
+        
+        for indx = 1:3
+        end
+        
         
     if omega==0
         moment = 1;
@@ -162,8 +169,8 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         %} 
         
         %estimate 1st derivate of M at 0 with polyfit
-        coeffc = polyfit(1:20, m(1:20)', 1);
-        a1 = coeffc(1)/tE;
+        coeffc = polyfit(1:200, m(1:200)', 1);
+        a1 = (coeffc(1))/(tE);
         %a1 = (m(2) - m(1))/(tE); % gradient of m at t=0 approximation
         
         a1_stddev = 0; %standard deviation of slope
@@ -172,9 +179,14 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);
         
+        const + delta*m
+        const
+        delta*m
+        omega
+        
         if moment < 1e-1
            disp('OMEGA CAUSED ERROR'); 
-           omega
+
         end
         
         
@@ -202,7 +214,7 @@ end
 
 
 function [momentT2, varT2] = meanAndVarEstimation(N2, Ny, sing_val, tE, f_answer, n_stddev)
-DEBUG = 0;
+DEBUG = 1;
 T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
@@ -249,7 +261,7 @@ porosity_answer = trapz(f_answer);
 
 % use G(omega) = ln<(T_2)^omega>, plot it
 
-omega_axis = linspace(-0.3,1,30)';
+omega_axis = linspace(-0.5,1,30)';
 
 result_axis = zeros(length(omega_axis), 2);
 J = zeros(1, length(omega_axis));
