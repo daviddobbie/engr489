@@ -64,11 +64,11 @@ xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
 
-n_stddev = 0.2;
+n_stddev = 0.2
 
 
 % generate measured data from density function
-N_histleng = 200;
+N_histleng = 1024;
 
 hist_data = zeros(N_histleng,2);
 for hist_indx = 1:N_histleng
@@ -148,6 +148,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
            omega
         end
         
+
         %{
         if moment < 1e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
@@ -165,26 +166,27 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         return;
     elseif -1 < omega && omega < 0  %implement eq 22
         %{
-        for indx = 1:2;
+        for indx = 2:3;
             if m(indx) > 1;
                m(indx) = 1;
             end
         end
         %}
         tau_min = tE^omega; %eq 19a
-        k = tau_min/gamma(omega+1); %eq 19a 
+        k = tau_min / gamma(omega+1); %eq 19a
         
         n = 2:1:N-1;
+        
+        % eq 19c-e
         delta_1 = (0.5 * tau_min * (2^omega - 1^omega) );
         delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
         delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
         delta = [delta_1 delta_mid delta_N];
-        %{
-            hold on
-            plot (delta)
-            hold off
-        %} 
-        
+          %{
+                 hold on
+         plot (delta)
+         hold off
+%}
         %estimate 1st derivate of M at 0 with polyfit
         coeffc = polyfit(1:100, m(1:100)', 1);
         a1 = (coeffc(1))/(tE);
@@ -195,7 +197,6 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);
         
-
         
         if moment < 1e-1
            disp('OMEGA CAUSED ERROR'); 
@@ -205,7 +206,6 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         omega
         end
         
-        
         if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
             %disp('delta * m')
@@ -213,7 +213,6 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
             %disp('1/gamma(omg + 1)')
             1/(gamma(omega + 1)*poro);
             moment = NaN;
-             %give it a very small weigthing
         end
         
         
@@ -231,7 +230,7 @@ end
 
 
 function [momentT2, varT2] = meanAndVarEstimation(N2, Ny, sing_val, tE, f_answer, n_stddev)
-DEBUG = 0;
+DEBUG = 1;
 T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
@@ -281,7 +280,7 @@ porosity_answer = trapz(f_answer);
 % use G(omega) = ln<(T_2)^omega>, plot it
 
 % initialie the omega_axis
-omega_axis = linspace(-0.2,1,30)';
+omega_axis = linspace(0,1,30)';
 
 result_axis = zeros(length(omega_axis), 2);
 J = zeros(1, length(omega_axis));
@@ -289,11 +288,11 @@ Sigma_G = eye(length(omega_axis));
 indx_covar_mat = 1;
 
 % printing the index for delta vector
-%{
+
 figure(66)
 xlabel("index - i")
 ylabel("$\Delta_i$ values")
-%}
+
 
 for inx = 1:length(omega_axis)
     omg = omega_axis(inx);
@@ -350,7 +349,7 @@ end
 
 % added weighting least squares for values that have a significantly
 % smaller variance involved
-coeffc = polyfit3(n2_omega_axis, n2_r_a , 2 , [], (n2_var_r_a));
+coeffc = polyfit3(n2_omega_axis, n2_r_a , 2 , [], n2_var_r_a);
 
 var_lnT2 = abs(coeffc(1));
 moment_lnT2 = coeffc(2);
