@@ -54,7 +54,7 @@ K1 = 1-2*exp(-tau1 *(1./T1) );  % T1 relaxation data
 T2_mean1 = 0.1
 T2_var1 = 0.004
 
-T2_mean2 = 0.01
+T2_mean2 = 0.05
 T2_var2 = 0.005
 
 
@@ -80,8 +80,8 @@ title('Correct Density Function of $T_2$');
 
 
 % generate the noise
-noise_mean = 0;
-n_std_dev = 0.00;
+noise_mean = 0.0;
+n_std_dev = 0.02;
 noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
 %m = data'
 m = K2*f_answer + noise;
@@ -181,7 +181,9 @@ alpha = 1000;
 c = ones([length(m)  1]);
 
 % lexiographical sorting of the m matrix
-%mlex = sortrows(reshape(m,1,[]).');
+mlex = sortrows(reshape(m,1,[]).');
+m = mlex;
+%K2 = sortrows(reshape(K2,Ny,N2).');
 
 alpha_hist = [];
 
@@ -206,7 +208,7 @@ for i=1:20
     
     plot(c)
 
-    alpha = 2*sqrt(size(c,2))/ norm(c); %implement eq 41
+    alpha = sqrt(size(c,2))/ norm(c); %implement eq 41
     
     %alpha =1000;
     
