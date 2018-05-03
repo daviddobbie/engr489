@@ -29,7 +29,7 @@ Ny = 101;
 %    N2 > trunc2 >= Ny
 %    N1 > trunc1 >= Nx
 trunc1=15;
-trunc2=25;
+trunc2=5;
 
 tau1min = 1e-4;
 tau1max = 10;
@@ -51,10 +51,10 @@ K1 = 1-2*exp(-tau1 *(1./T1) );  % T1 relaxation data
 
 
 %generate the density fn
-T2_mean1 = 0.1
-T2_var1 = 0.004
+T2_mean1 = 0.08
+T2_var1 = 0.2
 
-T2_mean2 = 0.05
+T2_mean2 = 0.02
 T2_var2 = 0.005
 
 
@@ -87,7 +87,7 @@ noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
 m = K2*f_answer + noise;
 
 m_orig = m;
-
+K2_orig = K2;
 figure(2)
 hold on
 %%plot (time,K2,'b');
@@ -103,7 +103,7 @@ ylabel('M(t)')
 % implement TSVD (truncated singular value decomposition), get the desired
 % rank for only the largest singular values in the system.
 
-%{
+
 %svd resultsin sorted by magnitude singular values. i.e we only have to
 %truncate to s1 rowsxcols.
 [U1, S1, V1] = svd(K1);
@@ -162,13 +162,13 @@ xlabel('Time 2  $ \tau_2 $ [s]')
 ylabel('$M_c(t)$')
 
 %}
-
+%{
 [U2, S2, V2] = svd(m);
 S2(trunc2:N2) = 0;
 m = U2*S2*V2';
 
 
-
+%}
 
 
 %% Step 2 Optimisation
@@ -268,7 +268,7 @@ xlabel('$T_2 [s]$')
 figure(7)
 clf
 hold on
-plot(tau2,K2*f);
+plot(tau2,K2_orig*f);
 plot(tau2,m_orig);
 hold off
 lgd = legend("$ \hat{M}(t) $", "M(t)");

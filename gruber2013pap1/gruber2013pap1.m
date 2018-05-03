@@ -42,21 +42,16 @@ T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  
 
 %generate the density fn
-T2_mean = 0.3
-T2_var = 0.04
+T2_mean1 = 0.1
+T2_var1 = 0.04
 
-% normal dist answer
-f_answer = normpdf(log10(T2), log10(T2_mean), sqrt(T2_var))';
+T2_mean2 = 0.006
+T2_var2 = 0.09
 
-%{
-%recration MODEL C pg 26
-T2_mean = 0.018
-T2_var = 0.43
+% formation of distribution
+f_answer = 1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
+f_answer = f_answer + 0.66*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
-% normal dist answer
-f_answer = normpdf(T2, log10(T2_mean), sqrt(T2_var))';
-
-%}
 
 porosity = trapz(f_answer);
 f_answer = f_answer./porosity; % normalise to unity porosity

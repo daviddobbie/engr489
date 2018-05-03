@@ -14,7 +14,11 @@
 %           Parts of the paper are
 %           1) Estimate mu-th moment of distribution S2.1
 %           2) Estimate tapered areas of the distribution S2.1
-%           3) Extend to non-poolarised data S
+%           3) Extend to non-poolarised data S2.2
+%           4) Other linear functionals to be estimated S2.3
+%               a) moments of specified region  compute Mellin operator and Expo
+%               Haar Transform
+%               (using mixes of other transforms)
 
 
 close all
@@ -38,21 +42,16 @@ T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  
 
 %generate the density fn
-T2_mean = 0.3
-T2_var = 0.04
+T2_mean1 = 0.1
+T2_var1 = 0.004
 
-% normal dist answer
-f_answer = normpdf(log10(T2), log10(T2_mean), sqrt(T2_var))';
+T2_mean2 = 0.05
+T2_var2 = 0.005
 
-%{
-%recration MODEL C pg 26
-T2_mean = 0.018
-T2_var = 0.43
+% formation of distribution
+f_answer = 2*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
+f_answer = f_answer + 0.5*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
-% normal dist answer
-f_answer = normpdf(T2, log10(T2_mean), sqrt(T2_var))';
-
-%}
 
 porosity = trapz(f_answer);
 f_answer = f_answer./porosity; % normalise to unity porosity
