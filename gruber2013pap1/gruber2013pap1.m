@@ -2,7 +2,7 @@
 % Victoria University of Wellington
 % Recreating paper 3
 % Estimation of petrophysical and fluid properties using integral transforms in
-% nuclear meagnetic resonance)
+% nuclear magnetic resonance)
 %
 % 
 % F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 104-115
@@ -41,6 +41,9 @@ T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
 
+K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
+
+
 %generate the density fn
 T2_mean1 = 0.1
 T2_var1 = 0.04
@@ -68,7 +71,21 @@ xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
 
-n_stddev = 0.2
+p = ones(Ny,1); %% Full polarization
+p = 1 - 2*exp(-tau2 .* (1./T2) ); % inversion recovery
+p = 1 - exp(-tau2 * (1./T2) ); % saturation recovery
+
+
+% generate the noise
+noise_mean = 0.0;
+n_std_dev = 0.02;
+noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
+
+m = K2*f_answer + noise;
+
+
+
+
 
 
 %% function definitions:
