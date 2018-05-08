@@ -92,7 +92,7 @@ title('Simulated Noisy Data M(t)');
 Tc = 0.08;
 
 
-[A, A_sigma] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2, tau2)
+exponentialHaarTransform(tE, m, n_std_dev, Tc, T2, tau2);
 
 %% function definitions:
 
@@ -109,40 +109,69 @@ Tc = 0.08;
 %    area_uncert = the T2 uncertainty of the tapered area
 
 function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,tau2)
+
     area = 0;
     area_uncert = 0;
 
-    % set up in table 1 of paper
     C = 0.7213 / Tc;
     alpha = 1.572*Tc;
     beta = 0.4087 / Tc;
     gamma = 1./T2 + beta;
+    
     N = length(M);
 
+    
     % implementing (-1)^n as vector operator
-    t_tot = N * tE % time axis
-    nLen = ceil(t_tot / (2*alpha)) % the number of n values in length of measured data
+    t_tot = N * tE; % time axis
+    n_segment = (t_tot / 2*alpha); % the size of each n segment in time
+  nLen = ceil(t_tot / n_segment); % the number of n values in length of measured data
     
-    n_term_small = (-1).^(0:nLen-1);
+    n_term_small = (-1).^(0:nLen-1)
     
-    n_term_long = repelem(n_term_small,ceil(N/nLen));
-    n_term = n_term_long(1:N);
+    n_term_long = repelem(n_term_small,ceil(N/n_seg_discrete_count));
+    %n_term_trunc = n_term_long(1:N);
     
-    k = C.*n_term'.*exp(-beta * tau2);
+    %k = C.*n_term_trunc'.*exp(-beta * tau2);
+    
+    figure(3)
+    plot (n_term_long);
+    xlabel('$t(s)$')
+    ylabel('$M(t)$')
+    title('n vect');
     
     
-    area = tE * (k' * M);
-    area_uncert = (sigma_n)^2 * ((tE * k')*k);
     
-    %{
-        figure(3)
-        plot (tau2,k);
-        xlabel('$t(s)$')
-        ylabel('$M(t)$')
-        title('n vect');
-    %}
+    
+    
+    
+    
+
+    
+    
+     
+    
+
+
+
+
+
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 % Discretised Mellin transform. Assumes that m is discretised along tE
 % sample interval (adapted from paper Mellin Transform Venk. 2010)
