@@ -31,29 +31,30 @@ set(0,'defaultTextInterpreter','latex');
 
 %% init variables
 % number of data points in each dimension
-N2 = 5000;
+N2 = 8000;
 % number of bins in relaxation time grids
-Ny = 100;      
+Ny = 1000;      
 %sets how many singular values we compress to
 sing_val=20; %no singular values
-tE = 500*1e-6; % sample interval
-T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
+tE = 200e-6; % sample interval
+T2 = logspace(-3,1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
 
 K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
+% RECREATE MODEL 4 from Gruber et al
 
 %generate the density fn
-T2_mean1 = 1
-T2_var1 = 0.03
+T2_mean1 = 0.066
+T2_var1 = 0.012
 
-T2_mean2 = 0.06
-T2_var2 = 0.15
+T2_mean2 = 0.2
+T2_var2 = 0.022
 
 % formation of distribution
-f_answer = 1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
-f_answer = f_answer + 1*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
+f_answer = .25*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
+f_answer = f_answer + .05*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
 
 porosity = trapz(f_answer);
@@ -63,36 +64,66 @@ f_answer = f_answer./porosity; % normalise to unity porosity
 %f_answer = zeros(Ny,1);
 %f_answer(500) = 1;
 
+
+Tc = 0.033; % estimated Tc of 33 ms (section 3.2)
+
 figure(1)
 plot(T2, f_answer);
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
+hold on
+%plot([Tc Tc],get(gca,'ylim'))
 
-%{
-p = ones(Ny,1); %% Full polarization
-p = 1 - 2*exp(-tau2 .* (1./T2) ); % inversion recovery
-p = 1 - exp(-tau2 * (1./T2) ); % saturation recovery
-%}
+% p = ones(Ny,1); %% Full polarization
+% p = 1 - 2*exp(-tau2 .* (1./T2) ); % inversion recovery
+% p = 1 - exp(-tau2 * (1./T2) ); % saturation recovery
+
+
 
 % generate the noise
-noise_mean = 0.0;
-n_std_dev = 0.02;
-noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
+noise_mean = 0;
+n_std_dev = 0.2;
 
-m = K2*f_answer + noise;
+results_leng = 100;
+results = zeros(1,results_leng);
+results_var = zeros(1,results_leng);
 
-figure(2)
-plot (tau2, m);
-xlabel('$t(s)$')
-ylabel('$M(t)$')
-title('Simulated Noisy Data M(t)');
+for i = 1:results_leng
 
-Tc = 0.08;
+    noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
+
+    m = K2*f_answer + noise;
+
+    %{
+    figure(2)
+    plot (tau2, m);
+    xlabel('$t(s)$')
+    ylabel('$M(t)$')
+    title('Simulated Noisy Data M(t)');
+    %}
+    
+  
+
+    [A, A_sigma] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2, tau2);
+    results(i) = A;  
+    results_var(i) = A_sigma;
+    
+end    
+   
+figure(4)
+h1 = histogram(results,'BinWidth', 0.05/7);
+h1.BinLimits =([0.65 0.9]);
+title('Estimated Tapered Area of Distribution')
+xlabel('Tapered Area')
+ylabel('Frequency')
+
+taperedAreaMean_mean = mean(results)
+taperedAreaMean_stddev = std(results)
 
 
-[A, A_sigma] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2, tau2)
+taperedAreaVariance_mean = mean(results_var)
 
 %% function definitions:
 
@@ -105,7 +136,7 @@ Tc = 0.08;
 %    sigma_n = standard deviation of the noise
 %    T2 = T2 relaxation axis
 % OUTPUTS:
-%    area = the T2 tapered area
+%    area = the T2 tapered area (where K(T2) > f(T2))
 %    area_uncert = the T2 uncertainty of the tapered area
 
 function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,tau2)
@@ -120,8 +151,8 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     N = length(M);
 
     % implementing (-1)^n as vector operator
-    t_tot = N * tE % time axis
-    nLen = ceil(t_tot / (2*alpha)) % the number of n values in length of measured data
+    t_tot = N * tE; % time axis
+    nLen = ceil(t_tot / (2*alpha)); % the number of n values in length of measured data
     
     n_term_small = (-1).^(0:nLen-1);
     
@@ -130,9 +161,29 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     
     k = C.*n_term'.*exp(-beta * tau2);
     
+    K = (C./gamma).*tanh(alpha*gamma);
     
-    area = tE * (k' * M);
-    area_uncert = (sigma_n)^2 * ((tE * k')*k);
+    
+    figure(7)
+    hold on
+    plot (T2, K);
+    set(gca, 'XScale', 'log')
+    xlabel('$T_2(s)$')
+    ylabel('$K(T_2,T_C)$')
+    title('The Exponential Haar Transform Kernel $K(T_2,T_c = 0.033s)$');
+    hold off
+    
+    
+    figure(8)
+    hold on
+    plot (tau2, k);
+    xlabel('$t(s)$')
+    ylabel('$K(t,T_c)$')
+    title('The Exponential Haar Transform Kernel $k(t,T_c = 0.033s)$');
+    hold off
+    
+    area = tE * (k' * M); % eq5
+    area_uncert = (sigma_n)^2 *tE * ((tE * k')*k); % eq6
     
     %{
         figure(3)
