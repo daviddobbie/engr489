@@ -1,30 +1,21 @@
 %% David Dobbie
 % Victoria University of Wellington
-% Recreating paper 3
-% Estimation of petrophysical and fluid properties using integral transforms in
-% nuclear magnetic resonance)
+% Recreating paper 4
+% A More accurate estimate of T2 distribution from direct analysis of NMR
+% measurements
 %
 % 
-% F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 104-115
+% F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 95-103
 
-%Aim: Using specific integral transforms to extract linear functionals that
-%        describe the distrubtion function of T2 relaxation times without 
-%        actually finding the distribution. This also includes aquiring the uncertainty 
-%        of them for analysis.
-%           Parts of the paper are
-%           1) Estimate mu-th moment of distribution S2.1
-%           2) Estimate tapered areas of the distribution S2.1
-%           3) Extend to non-poolarised data S2.2
-%           4) Other linear functionals to be estimated S2.3
-%               a) moments of specified region  compute Mellin operator and Expo
-%               Haar Transform
-%               (using mixes of other transforms)
+%Aim: To utilise linear functionals such as moments and tapered areas to
+%add constraints to the optimisation framework for inverting measured data
+%into their density function.
 
 
 %close all
 clc
 clf
-clear all
+clear
 set(0,'defaultTextInterpreter','latex');
  
 
@@ -33,7 +24,7 @@ set(0,'defaultTextInterpreter','latex');
 % number of data points in each dimension
 N2 = 8000;
 % number of bins in relaxation time grids
-Ny = 1000;      
+Ny = 100;      
 %sets how many singular values we compress to
 sing_val=10; %no singular values
 tE = 200e-6; % sample interval
@@ -43,18 +34,18 @@ tau2 = (1:N2)'*tE;
 
 K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
-% RECREATE MODEL 4 from Gruber et al
+% RECREATE MODEL 1 from Gruber et al pap 4
 
 %generate the density fn
-T2_mean1 = 0.066
-T2_var1 = 0.012
+T2_mean1 = 0.01
+T2_var1 = 0.04
 
-T2_mean2 = 0.2
-T2_var2 = 0.022
+T2_mean2 = 0.15
+T2_var2 = 0.075
 
 % formation of distribution
-f_answer = .25*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
-f_answer = f_answer + .05*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
+f_answer = .1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
+f_answer = f_answer + .25*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
 
 porosity = trapz(f_answer);
@@ -64,21 +55,20 @@ f_answer = f_answer./porosity; % normalise to unity porosity
 %f_answer = zeros(Ny,1);
 %f_answer(500) = 1;
 
-
-Tc = 0.033; % estimated Tc of 33 ms (section 3.2)
-
+%{
 figure(1)
 plot(T2, f_answer);
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
+%}
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.01;
+n_std_dev = 0.1;
 
-omega = linspace(0,1,12);
+omega = linspace(-0.5,1,12);
 T_cutoff = [0.01 0.1 1];
 
 
@@ -89,7 +79,13 @@ noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
 m = K2*f_answer + noise;  
 
 
-
+figure(2)
+hold on
+plot(m);
+hold off
+title('Measured Signal')
+xlabel('Time 2  $ \tau_2 $ [s]')
+ylabel('$M(t)$')
 
 % estimate tapered areas for different cut off times
 tpdAreasVect = ones(size(T_cutoff,2), 2);
@@ -98,14 +94,14 @@ tpdAreaKern = ones(size(T_cutoff,2), Ny);
 indx = 1;
 for Tc = T_cutoff
     [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
-    tpdAreasVect(indx,:) = [tpd, tpd_var];
+    tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
     
     
     tpdAreaKern(indx,:) = exponetialHaarTransformKernel(Tc,T2);
     indx = indx + 1;
 end
 
-tpdAreasVect
+tpdAreasVect;
 
 
 
@@ -119,14 +115,12 @@ for w = omega
     
     kern = T2.^w;
     momentKern(indx,:) = kern;
-    
-    
     [mom, mom_var] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
     momentVect(indx,:) = [mom sqrt(mom_var)]; %%since we use uncertainty
     indx = indx + 1;
 end
 
-momentVect
+momentVect;
 
 % create compressed m vector of values for optimisation
 [m_comp, k_comp] = compressData(m,K2,10);
@@ -146,18 +140,28 @@ f_est = optimisationInverseTransform(G_opt, L_opt, W_opt);
 
 f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)));
 
-figure(3)
+figure(50)
 hold on
 plot(T2, f_answer,'-b');
+plot(T2, f_est_old,'-r');
 plot(T2, f_est,'--k');
-plot(T2, f_est_old,'-m');
-
-
 hold off
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Density Function of $T_2$');
+legend('True','Estimated ILT','Estimated ILT+')
+
+figure(51)
+hold on
+plot(T2, abs(f_answer-f_est_old),'-r');
+plot(T2, abs(f_answer-f_est),'--k');
+hold off
+set(gca, 'XScale', 'log')
+xlabel('$T_2(s)$')
+ylabel('$f(T_2)$')
+title('Error in Density Function Prediction of $T_2$');
+legend('Estimated ILT','Estimated ILT+')
 
 
 %% function definitions:
@@ -234,6 +238,20 @@ function [area] = actualTaperedArea(f, Tc, T2)
     area = K * f;
 end
 
+% Calculates the normalised root mean square error of two different
+% functions. Quantifies correctness.
+% INPUTS: 
+%    est = estimate function
+%    true = the true function
+% OUTPUTS:
+%    nrmse = normalised root mean square error of the dist.
+% 
+function nrmse = normalisedRootMeanSquareError(est, true)
+    ms = mean((est - true).^2);
+    rms = sqrt(ms);
+    nrmse = (rms/true)*100;
+end
+
 
 % Compress the measured data to a set number of singular values. This
 % involves extracting the largest singular values that make up the inherent
@@ -268,10 +286,19 @@ function [M_compressed K_compressed] = compressData(M,K,sing_val)
         V2c = V2(:,:);
 
     end
-
+       
     %set new compressed kernels
     K_compressed = S2c*V2c';
     M_compressed = (M'*U2c);
+    
+    
+    figure(3)
+    plot(M_compressed);
+    title('Compressed Measured Signal')
+    xlabel('Time 2  $ \tau_2 $ [s]')
+    ylabel('$M_c(t)$')
+    
+    
 end
 
 
@@ -313,7 +340,10 @@ function f_est = optimisationInverseTransform(G, L, W)
     hold off
 
     f_est = L'*c;
+    under = min(f_est);
+    f_est = f_est - under;
     f_est = f_est ./ trapz(abs(f_est)); %normalise to unity
+
 
 end
 
