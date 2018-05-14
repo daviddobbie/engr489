@@ -118,8 +118,7 @@ momentKern = ones(size(omega,2), Ny);
 indx = 1;
 for w = omega
     
-    kern = T2.^w;
-    momentKern(indx,:) = kern;
+    
     
     
     [mom, mom_var] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
@@ -138,7 +137,7 @@ m_comp = m_comp'; % compressed m vector
 M_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)];
 
 
-L_opt = [k_comp ; momentKern ; tpdAreaKern];
+L_opt = [k_comp ; tpdAreaKern];
 
 
 %% function definitions:
