@@ -73,7 +73,6 @@ set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
-hold on
 
 % generate the noise
 noise_mean = 0;
@@ -143,7 +142,19 @@ W_vect = [(1/n_std_dev)*(ones(size(m_comp)))  ; momentVect(:,2) ; ...
     tpdAreasVect(:,2)];
 W_opt = W_vect .* eye(size(G_opt,1));
 
+f_est = optimisationInverseTransform(G_opt, L_opt, W_opt);
 
+
+
+figure(3)
+hold on
+plot(T2, f_answer);
+plot(T2, f_est);
+hold off
+set(gca, 'XScale', 'log')
+xlabel('$T_2(s)$')
+ylabel('$f(T_2)$')
+title('Density Function of $T_2$');
 
 
 %% function definitions:
@@ -181,7 +192,14 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     kernel = (C./gamma).*tanh(alpha*gamma);
 end
 
-
+% Calculate the kernel used to compute the tapered area in the T2 domain.
+% This is the exponetial Haar transform
+% INPUTS: 
+%    Tc = the bound and fluid fraction point (in time)
+%    T2 = T2 relaxation axis
+% OUTPUTS:
+%    kern = the kernel of the tapered heaviside function used.
+%  
 function [kern] = exponetialHaarTransformKernel(Tc, T2)
     % set up in table 1 of paper
     C = 0.7213 / Tc;
@@ -253,6 +271,48 @@ function [M_compressed K_compressed] = compressData(M,K,sing_val)
     M_compressed = (M'*U2c);
 end
 
+
+% Optimisation function. This function uses regularisation and optimisation
+% technqiues with a weighted matrix and the cost matrices to apply an ILT
+% (or ILT+). This is adapted from Venk 2002. solving Fredholm integrals
+% INPUTS: 
+%    G = N x 1 linear functional and compressed measurement data 
+%    K = compressed input kernel
+%    L = mapping matrix conversion from T2 to t space
+%    W = weighting matrix
+% OUTPUTS:
+%    f_est = the estimated density function
+% 
+function f_est = optimisationInverseTransform(G, L, W)
+    alpha = 1000;
+    Ny = size(L,2);
+    c = ones([length(G)  1]);
+
+    % lexiographical sorting of the m matrix
+    %Glex = sortrows(reshape(G,1,[]).');
+    G = W*G;
+    L = W*L;
+    %K2 = sortrows(reshape(K2,Ny,N2).');
+
+    alpha_hist = [];
+    f_est = c;
+
+    %this is the method that prevents it being divergent
+    for i=1:20
+        %k_square = K2*K2'; 
+        stepFnMatrix = (heaviside(L'*c))'.* eye(Ny);
+        k_square = L *stepFnMatrix * L';       %recreate eq 30
+        %made symmetric and semi-positive definite
+        c = inv(k_square + alpha*eye(length(G)))*G; %eq 29
+        %plot(c)
+        alpha = sqrt(size(c,2))/ norm(c); %implement eq 41    
+    end
+    hold off
+
+    f_est = L'*c;
+    f_est = f_est ./ trapz(f_est); %normalise to unity
+
+end
 
 
 
