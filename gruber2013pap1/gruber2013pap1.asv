@@ -31,9 +31,9 @@ set(0,'defaultTextInterpreter','latex');
 
 %% init variables
 % number of data points in each dimension
-N2 = 4000;
+N2 = 8000;
 % number of bins in relaxation time grids
-Ny = 100;      
+Ny = 5000;      
 %sets how many singular values we compress to
 sing_val=20; %no singular values
 tE = 200e-6; % sample interval
@@ -84,7 +84,7 @@ hold on
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.2;
+n_std_dev = 0.00;
 
 results_leng = 100;
 results = zeros(1,results_leng);
@@ -116,26 +116,25 @@ end
 
 
 figure(4)
-h1 = histogram(results,'BinWidth', 0.05/7)
+h1 = histogram(results,'BinWidth', 0.05/7);
 h1.BinLimits =([0.65 0.9]);
 title('Estimated Tapered Area of Distribution')
 xlabel('Tapered Area')
 ylabel('Frequency')
 
+
 taperedArea = actualTaperedArea(f_answer, Tc, T2)
 hold on
-p = plot([taperedArea taperedArea], [0 max(h1.Values)]);
-p.LineWidth = 3;
+p = plot([taperedArea taperedArea], [0 50]);
+p.LineWidth = 2.5;
 p.Color = 'k';
 
 
 taperedAreaMean_mean = mean(results)
 
-p = plot([taperedAreaMean_mean taperedAreaMean_mean], [0 max(h1.Values)]);
+p = plot([taperedAreaMean_mean taperedAreaMean_mean], [0 50]);
 p.LineWidth = 2.5;
 p.Color = 'm';
-
-legend('Frequency of Tapered Areas','Actual Tapered Area','Estimated Tapered Area')
 
 
 
@@ -169,20 +168,19 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     gamma = 1./T2 + beta;
     N = length(M);
 
-    % implementing (-1)^n as vector operator  
-    n = floor(tau2/(2*alpha));
-    n_term = ((-1).^n)';
+    % implementing (-1)^n as vector operator
+    t_tot = N * tE; % time axis
+    nLen = ceil(t_tot / (2*alpha)); % the number of n values in length of measured data
     
-%      nLen = ceil(t_tot / (2*alpha)); % the number of n values in length of measured data
-%      n_term_small = (-1).^(0:nLen-1);
-%      
-%      n_term_long = repelem(n_term_small,ceil(N/nLen));
-%     n_term = n_term_long(1:N);
+    n_term_small = (-1).^(0:nLen-1);
+    
+    n_term_long = repelem(n_term_small,ceil(N/nLen));
+    n_term = n_term_long(1:N);
     
     k = C.*n_term'.*exp(-beta * tau2);
     
     %K = (C./gamma).*tanh(alpha*gamma);
-%{
+    %{
     figure(7)
     hold on
     plot (T2, K);
@@ -191,7 +189,7 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     ylabel('$K(T_2,T_C)$')
     title('The Exponential Haar Transform Kernel $K(T_2,T_c = 0.033s)$');
     hold off
- 
+    
     
     figure(8)
     hold on
@@ -200,7 +198,7 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     ylabel('$K(t,T_c)$')
     title('The Exponential Haar Transform Kernel $k(t,T_c = 0.033s)$');
     hold off
-  %} 
+    %}
     area = tE * (k' * M); % eq5
     area_uncert = (sigma_n)^2 *tE * ((tE * k')*k); % eq6
     
@@ -270,13 +268,10 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         % measurement (leads to complex result from log)
         moment = k + 1/(gamma(omega + 1)*poro) * (delta*m); % eq18
         
-        %{
         if moment < 1e-1
            disp('OMEGA CAUSED ERROR'); 
            omega
         end
-        %}
-        
         
         %eq 23
         var = ((delta.^2)*(delta.^2)'/gamma(omega+1)^2)*(sigma_n/poro)^2;
@@ -313,7 +308,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         delta*m
         omega
         end
-        %{
+        
         if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
             %disp('delta * m')
@@ -322,7 +317,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
             1/(gamma(omega + 1)*poro);
             moment = NaN;
         end
-        %}
+        
         
         var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2 + var;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
