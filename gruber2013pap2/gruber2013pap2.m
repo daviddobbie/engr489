@@ -76,9 +76,9 @@ title('Correct Density Function of $T_2$');
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.2;
+n_std_dev = 0.01;
 
-omega = linspace(-0.5,1,12);
+omega = linspace(0,1,12);
 T_cutoff = [0.01 0.1 1];
 
 
@@ -144,12 +144,15 @@ W_opt = W_vect .* eye(size(G_opt,1));
 
 f_est = optimisationInverseTransform(G_opt, L_opt, W_opt);
 
-
+f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)));
 
 figure(3)
 hold on
-plot(T2, f_answer);
-plot(T2, f_est);
+plot(T2, f_answer,'-b');
+plot(T2, f_est,'--k');
+plot(T2, f_est_old,'-m');
+
+
 hold off
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
@@ -299,18 +302,18 @@ function f_est = optimisationInverseTransform(G, L, W)
 
     %this is the method that prevents it being divergent
     for i=1:20
-        %k_square = K2*K2'; 
+        %L_square = L*L'; 
         stepFnMatrix = (heaviside(L'*c))'.* eye(Ny);
-        k_square = L *stepFnMatrix * L';       %recreate eq 30
+        L_square = L *stepFnMatrix * L';       %recreate eq 30
         %made symmetric and semi-positive definite
-        c = inv(k_square + alpha*eye(length(G)))*G; %eq 29
+        c = inv(L_square + alpha*eye(length(G)))*G; %eq 29
         %plot(c)
         alpha = sqrt(size(c,2))/ norm(c); %implement eq 41    
     end
     hold off
 
     f_est = L'*c;
-    f_est = f_est ./ trapz(f_est); %normalise to unity
+    f_est = f_est ./ trapz(abs(f_est)); %normalise to unity
 
 end
 
