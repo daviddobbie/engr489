@@ -135,10 +135,15 @@ momentVect
 m_comp = m_comp'; % compressed m vector
 
 
-M_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)];
+G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
+L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
 
 
-L_opt = [k_comp ; momentKern ; tpdAreaKern];
+W_vect = [(1/n_std_dev)*(ones(size(m_comp)))  ; momentVect(:,2) ; ...
+    tpdAreasVect(:,2)];
+W_opt = W_vect .* eye(size(G_opt,1));
+
+
 
 
 %% function definitions:
