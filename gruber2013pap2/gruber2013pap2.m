@@ -39,10 +39,10 @@ K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
 %generate the density fn
 T2_mean1 = 0.01
-T2_var1 = 0.02
+T2_var1 = 0.04
 
 T2_mean2 = 0.15
-T2_var2 = 0.04
+T2_var2 = 0.08
 
 % formation of distribution
 f_answer = .1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
@@ -69,7 +69,8 @@ title('Correct Density Function of $T_2$');
 noise_mean = 0;
 n_std_dev = 0.01;
 
-actualMean = T2*f_answer;
+%calc the logarithmic mean
+actualMean = exp((log(T2))*f_answer)
 
 %--------------- running simulations and results
 
@@ -84,8 +85,8 @@ for i = 1:results_leng
     [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
     f_answer, K2, N2, Ny, tE, T2, tau2, porosity); 
 
-    results_T2meanold(i) = (T2*f_est_old); % weighted mean w/ T2 axis
-    results_T2meannew(i) = (T2*f_est_new); % weighted mean w/ T2 axis 
+    results_T2meanold(i) = exp((log(T2))*f_est_old); % weighted mean w/ T2 axis
+    results_T2meannew(i) = exp((log(T2))*f_est_new); % weighted mean w/ T2 axis 
     
 %     results_BFVold(i) = mean(f_est_old);
 %     results_BFVnew(i) = mean(f_est_new);    
@@ -127,11 +128,11 @@ acquiredOldEst_mean = mean(results_T2meanold);
 hold on
 p = plot([actualMean actualMean], [0 max(h1.Values)]);
 p.LineWidth = 3;
-p.Color = 'k';
+p.Color = 'r';
 
 p = plot([acquiredOldEst_mean acquiredOldEst_mean], [0 max(h1.Values)]);
 p.LineWidth = 2.5;
-p.Color = 'm';
+p.Color = 'k';
 
 hold off
 legend('Frequency','True T2','Estimated ILT')
@@ -150,11 +151,11 @@ acquiredNewEst_mean = mean(results_T2meannew);
 hold on
 p = plot([actualMean actualMean], [0 max(h2.Values)]);
 p.LineWidth = 3;
-p.Color = 'k';
+p.Color = 'r';
 
 p = plot([acquiredNewEst_mean acquiredNewEst_mean], [0 max(h2.Values)]);
 p.LineWidth = 2.5;
-p.Color = 'm';
+p.Color = 'k';
 
 hold off
 legend('Frequency','True T2','Estimated ILT+')
@@ -194,7 +195,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     noise_mean, f_answer, K2, N2, Ny, tE, T2, tau2, porosity)
 
 
-    omega = linspace(-0.5,1,12);
+    omega = linspace(0.1,1,12);
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
@@ -254,8 +255,8 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [(ones(size(m_comp)))./n_std_dev  ; 0./momentVect(:,2) ; ...
-        0./tpdAreasVect(:,2)]
+    W_vect = [1*(ones(size(m_comp))); n_std_dev./momentVect(:,2) ; ...
+        n_std_dev./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
 
     %{
@@ -452,8 +453,9 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
         stepFnMatrix = (heaviside(L'*c))'.* eye(Ny);
         L_square = L *stepFnMatrix * L';       %recreate eq 30
         %made symmetric and semi-positive definite
-        c = inv(L_square + alpha*eye(length(G)))*G; %eq 29
-        alpha =  n_std_dev * sqrt(length(G))/ norm(c); %implement eq 41   
+        c = inv(L_square + alpha*eye(length(G))); %eq 29
+        c = c*G;
+        alpha =  n_std_dev * sqrt(length(G))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
     end
     hold off
