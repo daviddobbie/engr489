@@ -16,15 +16,16 @@
 clc
 clf
 clear
+
 set(0,'defaultTextInterpreter','latex');
  
 
 
 %% init variables
 % number of data points in each dimension
-N2 = 8000;
+N2 = 1000;
 % number of bins in relaxation time grids
-Ny = 100;      
+Ny = 50;      
 %sets how many singular values we compress to
 sing_val=10; %no singular values
 tE = 200e-6; % sample interval
@@ -38,10 +39,10 @@ K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
 %generate the density fn
 T2_mean1 = 0.01
-T2_var1 = 0.04
+T2_var1 = 0.02
 
 T2_mean2 = 0.15
-T2_var2 = 0.075
+T2_var2 = 0.04
 
 % formation of distribution
 f_answer = .1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
@@ -66,105 +67,219 @@ title('Correct Density Function of $T_2$');
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.1;
+n_std_dev = 0.01;
 
-omega = linspace(-0.5,1,12);
-T_cutoff = [0.01 0.1 1];
+actualMean = T2*f_answer;
+
+%--------------- running simulations and results
+
+results_leng = 10;
+results_T2meanold = zeros(1,results_leng);
+results_T2meannew = zeros(1,results_leng);
+
+results_BFVold = zeros(1,results_leng);
+results_BFVnew = zeros(1,results_leng);
+
+for i = 1:results_leng
+    [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
+    f_answer, K2, N2, Ny, tE, T2, tau2, porosity); 
+
+    results_T2meanold(i) = (T2*f_est_old); % weighted mean w/ T2 axis
+    results_T2meannew(i) = (T2*f_est_new); % weighted mean w/ T2 axis 
+    
+%     results_BFVold(i) = mean(f_est_old);
+%     results_BFVnew(i) = mean(f_est_new);    
+    
+    i
+    figure(50)
+    clf
+    hold on
+    plot(T2, f_answer,'-b');
+    plot(T2, f_est_old,'-r');
+    plot(T2, f_est_new,'--k');
+
+    p = plot([actualMean actualMean], [0 0.1]);
+    p.LineWidth = 3;
+    p.Color = 'k';
 
 
+    hold off
+    set(gca, 'XScale', 'log')
+    xlabel('$T_2(s)$')
+    ylabel('$f(T_2)$')
+    title('Density Function of $T_2$');
+    legend('True','Estimated ILT','Estimated ILT+')
+end    
+   
+
+%--------------- plotting old T2 est/ mean
+
+figure(5)
+h1 = histogram(results_T2meanold);
+h1.BinWidth = 0.5e-2;
+title('ILT')
+xlabel('T2LM [s]')
+ylabel('Frequency')
 
 
-noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
+acquiredOldEst_mean = mean(results_T2meanold);
 
-m = K2*f_answer + noise;  
-
-
-figure(2)
 hold on
-plot(m);
+p = plot([actualMean actualMean], [0 max(h1.Values)]);
+p.LineWidth = 3;
+p.Color = 'k';
+
+p = plot([acquiredOldEst_mean acquiredOldEst_mean], [0 max(h1.Values)]);
+p.LineWidth = 2.5;
+p.Color = 'm';
+
 hold off
-title('Measured Signal')
-xlabel('Time 2  $ \tau_2 $ [s]')
-ylabel('$M(t)$')
+legend('Frequency','True T2','Estimated ILT')
 
-% estimate tapered areas for different cut off times
-tpdAreasVect = ones(size(T_cutoff,2), 2);
-tpdAreaKern = ones(size(T_cutoff,2), Ny);
+%--------------- plotting new T2 est/ mean
 
-indx = 1;
-for Tc = T_cutoff
-    [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
-    tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
-    
-    
-    tpdAreaKern(indx,:) = exponetialHaarTransformKernel(Tc,T2);
-    indx = indx + 1;
-end
+figure(6)
+h2 = histogram(results_T2meannew);
+h2.BinWidth = 0.5e-2;
+title('ILT+')
+xlabel('T2LM [s]')
+ylabel('Frequency')
 
-tpdAreasVect;
+acquiredNewEst_mean = mean(results_T2meannew);
 
-
-
-% estimate different moments of the T2 distribution
-momentVect = ones(size(omega,2), 2);
-momentKern = ones(size(omega,2), Ny);
-
-
-indx = 1;
-for w = omega
-    
-    kern = T2.^w;
-    momentKern(indx,:) = kern;
-    [mom, mom_var] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
-    momentVect(indx,:) = [mom sqrt(mom_var)]; %%since we use uncertainty
-    indx = indx + 1;
-end
-
-momentVect;
-
-% create compressed m vector of values for optimisation
-[m_comp, k_comp] = compressData(m,K2,10);
-
-m_comp = m_comp'; % compressed m vector
-
-
-G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
-L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-
-
-W_vect = [(1/n_std_dev)*(ones(size(m_comp)))  ; momentVect(:,2) ; ...
-    tpdAreasVect(:,2)];
-W_opt = W_vect .* eye(size(G_opt,1));
-
-f_est = optimisationInverseTransform(G_opt, L_opt, W_opt);
-
-f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)));
-
-figure(50)
 hold on
-plot(T2, f_answer,'-b');
-plot(T2, f_est_old,'-r');
-plot(T2, f_est,'--k');
+p = plot([actualMean actualMean], [0 max(h2.Values)]);
+p.LineWidth = 3;
+p.Color = 'k';
+
+p = plot([acquiredNewEst_mean acquiredNewEst_mean], [0 max(h2.Values)]);
+p.LineWidth = 2.5;
+p.Color = 'm';
+
 hold off
-set(gca, 'XScale', 'log')
-xlabel('$T_2(s)$')
-ylabel('$f(T_2)$')
-title('Density Function of $T_2$');
-legend('True','Estimated ILT','Estimated ILT+')
+legend('Frequency','True T2','Estimated ILT+')
+
+
+
+
+%{
+
 
 figure(51)
 hold on
 plot(T2, abs(f_answer-f_est_old),'-r');
-plot(T2, abs(f_answer-f_est),'--k');
+plot(T2, abs(f_answer-f_est_new),'--k');
 hold off
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Error in Density Function Prediction of $T_2$');
 legend('Estimated ILT','Estimated ILT+')
+%}
+errorOld = normalisedRootMeanSquareError(acquiredOldEst_mean,actualMean)
+errorNew = normalisedRootMeanSquareError(acquiredNewEst_mean,actualMean)
+
 
 
 %% function definitions:
+
+% Estimation of the density function from measured data. Retruns two
+% results, the ILT method in Venk. 2002 (old) and the ILT+ method in Gruber
+% 2013 (new).
+% INPUTS: 
+%    m
+% OUTPUTS:
+%    area
+function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
+    noise_mean, f_answer, K2, N2, Ny, tE, T2, tau2, porosity)
+
+
+    omega = linspace(-0.5,1,12);
+    T_cutoff = [0.01 0.1 1];
+
+    noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
+    m = K2*f_answer + noise;  
+    %{
+        figure(2)
+        hold on
+        plot(m);
+        hold off
+        title('Measured Signal')
+        xlabel('Time 2  $ \tau_2 $ [s]')
+        ylabel('$M(t)$')
+    %}
+    % estimate tapered areas for different cut off times
+    tpdAreasVect = ones(size(T_cutoff,2), 2);
+    tpdAreaKern = ones(size(T_cutoff,2), Ny);
+    indx = 1;
+    for Tc = T_cutoff
+        [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
+        
+        k = exponentialHaarTransform(tE, ones(size(m)), n_std_dev, Tc, T2,tau2);
+        tpd_var = n_std_dev^2 *(norm(k))^2;
+        
+        
+        tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
+        tpdAreaKern(indx,:) = exponetialHaarTransformKernel(Tc,T2);
+        indx = indx + 1;
+    end
+    tpdAreasVect;
+
+    % estimate different moments of the T2 distribution
+    momentVect = ones(size(omega,2), 2);
+    momentKern = ones(size(omega,2), Ny);
+
+    indx = 1;
+    for w = omega
+
+        kern = T2.^w;
+        momentKern(indx,:) = kern;
+        [mom, mv] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
+        
+        % to estimate the uncertainty of the moment (eq 11)
+        k = mellinTransform(ones(size(m)), w, tE, porosity, 0, n_std_dev);
+        mom_var = n_std_dev^2 *(norm(k))^2;
+        
+        momentVect(indx,:) = [mom sqrt(mom_var)]; %%since we use uncertainty
+        indx = indx + 1;
+    end
+
+    momentVect;
+
+    % create compressed m vector of values for optimisation
+    [m_comp, k_comp] = compressData(m,K2,10);
+
+    m_comp = m_comp'; % compressed m vector
+
+
+    G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
+    L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
+    W_vect = [(ones(size(m_comp)))./n_std_dev  ; 1./momentVect(:,2) ; ...
+        1./tpdAreasVect(:,2)]
+    W_opt = W_vect .* eye(size(G_opt,1));    
+
+    %{
+    
+    
+    G_opt = [m_comp ; tpdAreasVect(:,1)]; %eq 13 pap4    
+    L_opt = [k_comp  ; tpdAreaKern]; % eq 14 pap 4
+    W_vect = [(1/n_std_dev)*(ones(size(m_comp)))  ; ...
+        tpdAreasVect(:,2)];
+    W_opt = W_vect .* eye(size(G_opt,1));      
+    
+     G_opt = [m_comp ]; %eq 13 pap4    
+    L_opt = [k_comp]; % eq 14 pap 4
+    W_vect = [(1/n_std_dev)*(ones(size(m_comp)))];
+    W_opt = W_vect .* eye(size(G_opt,1));    
+    
+    
+%}
+
+    f_est_new = optimisationInverseTransform(G_opt, L_opt, W_opt);
+    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)));
+
+end
+
 
 % Discretised Exponential Haar Transform. Used for computing the tapered
 % areas
@@ -247,7 +362,8 @@ end
 %    nrmse = normalised root mean square error of the dist.
 % 
 function nrmse = normalisedRootMeanSquareError(est, true)
-    ms = mean((est - true).^2);
+    s =(est - true).^2;
+    ms = s;
     rms = sqrt(ms);
     nrmse = (rms/true)*100;
 end
@@ -268,10 +384,10 @@ end
 function [M_compressed K_compressed] = compressData(M,K,sing_val)
     N = length(M);
 
-    %svd resultsin sorted by magnitude singular values. i.e we only have to
+    %svd results sorted by magnitude singular values. i.e we only have to
     %truncate to s1 rowsxcols.
-    [U2, S2, V2] = svd(K);
-
+    
+    [U2, S2, V2] = svd(K);    
     %only leave trunc number of largest values. This removes small weigthed
     %components that have little bearing on actual data.
 
@@ -291,13 +407,13 @@ function [M_compressed K_compressed] = compressData(M,K,sing_val)
     K_compressed = S2c*V2c';
     M_compressed = (M'*U2c);
     
-    
+    %{
     figure(3)
     plot(M_compressed);
     title('Compressed Measured Signal')
     xlabel('Time 2  $ \tau_2 $ [s]')
     ylabel('$M_c(t)$')
-    
+    %}
     
 end
 
@@ -320,7 +436,9 @@ function f_est = optimisationInverseTransform(G, L, W)
 
     % lexiographical sorting of the m matrix
     %Glex = sortrows(reshape(G,1,[]).');
+
     G = W*G;
+
     L = W*L;
     %K2 = sortrows(reshape(K2,Ny,N2).');
 
@@ -342,7 +460,7 @@ function f_est = optimisationInverseTransform(G, L, W)
     f_est = L'*c;
     under = min(f_est);
     f_est = f_est - under;
-    f_est = f_est ./ trapz(abs(f_est)); %normalise to unity
+    f_est = f_est ./ trapz(f_est); %normalise to unity
 
 
 end
@@ -409,7 +527,24 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         const = ((a1*omega) / (omega+1)) * tau_min^((omega+1)/omega);
         
-        moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);        
+        
+        
+        
+        
+        moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);       
+        
+        
+       if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
+            k;
+            %disp('delta * m')
+            (delta*m);
+            %disp('1/gamma(omg + 1)')
+            1/(gamma(omega + 1)*poro);
+            moment = NaN;
+        end
+        
+        
+        
         var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2 + var;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         var = var + ((omega*tau_min^((omega+1)/omega))/gamma(omega + 2)) * (a1_stddev / poro)^2;
