@@ -67,7 +67,7 @@ title('Correct Density Function of $T_2$');
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.01;
+n_std_dev = 0.1;
 
 %calc the logarithmic mean
 actualMean = exp((log(T2))*f_answer)
@@ -255,10 +255,13 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [1*(ones(size(m_comp))); n_std_dev./momentVect(:,2) ; ...
-        n_std_dev./tpdAreasVect(:,2)]
+    W_vect = [1*(ones(size(m_comp)))/n_std_dev; 1./momentVect(:,2) ; ...
+        1./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
-
+    
+    % normalise to unity, make it comparable to unweighted method
+    W_opt = W_opt/norm(W_opt)  
+    
     %{
     
     
