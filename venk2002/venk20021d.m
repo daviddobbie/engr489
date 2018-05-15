@@ -208,7 +208,7 @@ for i=1:20
     
     plot(c)
 
-    alpha = sqrt(size(c,2))/ norm(c); %implement eq 41
+    alpha = n_std_dev * sqrt(length(c))/ norm(c); %implement eq 41
     
     %alpha =1000;
     

@@ -118,7 +118,7 @@ figure(5)
 h1 = histogram(results_T2meanold);
 h1.BinWidth = 0.5e-2;
 title('ILT')
-xlabel('T2LM [s]')
+xlabel('$T2_{LM}$ [s]')
 ylabel('Frequency')
 
 
@@ -142,7 +142,7 @@ figure(6)
 h2 = histogram(results_T2meannew);
 h2.BinWidth = 0.5e-2;
 title('ILT+')
-xlabel('T2LM [s]')
+xlabel('$T2_{LM}$ [s]')
 ylabel('Frequency')
 
 acquiredNewEst_mean = mean(results_T2meannew);
@@ -254,8 +254,8 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [(ones(size(m_comp)))./n_std_dev  ; 1./momentVect(:,2) ; ...
-        1./tpdAreasVect(:,2)]
+    W_vect = [(ones(size(m_comp)))./n_std_dev  ; 0./momentVect(:,2) ; ...
+        0./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
 
     %{
@@ -275,8 +275,8 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     
 %}
 
-    f_est_new = optimisationInverseTransform(G_opt, L_opt, W_opt);
-    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)));
+    f_est_new = optimisationInverseTransform(G_opt, L_opt, W_opt, n_std_dev);
+    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)), n_std_dev);
 
 end
 
@@ -429,7 +429,7 @@ end
 % OUTPUTS:
 %    f_est = the estimated density function
 % 
-function f_est = optimisationInverseTransform(G, L, W)
+function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     alpha = 1000;
     Ny = size(L,2);
     c = ones([length(G)  1]);
@@ -447,13 +447,14 @@ function f_est = optimisationInverseTransform(G, L, W)
 
     %this is the method that prevents it being divergent
     for i=1:20
+        
         %L_square = L*L'; 
         stepFnMatrix = (heaviside(L'*c))'.* eye(Ny);
         L_square = L *stepFnMatrix * L';       %recreate eq 30
         %made symmetric and semi-positive definite
         c = inv(L_square + alpha*eye(length(G)))*G; %eq 29
-        %plot(c)
-        alpha = sqrt(size(c,2))/ norm(c); %implement eq 41    
+        alpha =  n_std_dev * sqrt(length(G))/ norm(c); %implement eq 41   
+        %plot(c) 
     end
     hold off
 
