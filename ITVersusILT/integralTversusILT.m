@@ -1,18 +1,14 @@
 %% David Dobbie
 % Victoria University of Wellington
-% Recreating paper 4
-% A More accurate estimate of T2 distribution from direct analysis of NMR
-% measurements
+% Comparion of EHT, MT versus ILT
 %
 % 
-% F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 95-103
 
-%Aim: To utilise directly computedlinear functionals such as moments and 
-%tapered areas to add constraints to the optimisation framework for inverting
-%measured data into their density function.
+%Aim: Comparing the performance of linear functional transforms with the
+%original ILT method in Venk 2002.
 
 
-%close all
+close all
 clc
 clf
 clear
@@ -56,18 +52,18 @@ f_answer = f_answer./porosity; % normalise to unity porosity
 %f_answer = zeros(Ny,1);
 %f_answer(500) = 1;
 
-%{
+
 figure(1)
 plot(T2, f_answer);
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
-%}
+
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.1;
+n_std_dev = 0.2;
 
 %calc the logarithmic mean
 actualMean = exp((log(T2))*f_answer)
@@ -75,51 +71,105 @@ actualMean = exp((log(T2))*f_answer)
 %--------------- running simulations and results
 
 results_leng = 100;
-results_T2meanold = zeros(1,results_leng);
-results_T2meannew = zeros(1,results_leng);
+results_tpvIT = zeros(3,results_leng);
+results_momIT = zeros(4,results_leng);
 
-results_BFVold = zeros(1,results_leng);
-results_BFVnew = zeros(1,results_leng);
+results_tpvILT = zeros(3,results_leng);
+results_momILT = zeros(4,results_leng);
+
+results_tpvTrue = zeros(3,results_leng);
+results_momTrue = zeros(4,results_leng);
+
 
 areaErrorOld = 0;
 areaErrorNew = 0;
 
+
+
 for i = 1:results_leng
-    [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
-    f_answer, K2, N2, Ny, tE, T2, tau2, porosity); 
-
-    results_T2meanold(i) = exp((log(T2))*f_est_old); % weighted mean w/ T2 axis
-    results_T2meannew(i) = exp((log(T2))*f_est_new); % weighted mean w/ T2 axis 
+    [tpvIT momIT tpvILT momILT tpvTrue momTrue] =  ...
+        evaluateIntegralTransforms(n_std_dev, noise_mean, f_answer, ...
+        K2, N2, Ny, tE, T2, tau2, porosity); 
     
-%     results_BFVold(i) = mean(f_est_old);
-%     results_BFVnew(i) = mean(f_est_new);    
+    results_tpvIT(:,i) = tpvIT(:,1);
+    results_momIT(:,i) = momIT(:,1);    
+    results_tpvILT(:,i) = tpvILT(:,1);
+    results_momILT(:,i) = momILT(:,1);    
+    results_tpvTrue(:,i) = tpvTrue(:,1);
+    results_momTrue(:,i) = momTrue(:,1);     
     
-    i
-    figure(50)
-    clf
-    hold on
-    plot(T2, f_answer,'-b');
-    plot(T2, f_est_old,'-r');
-    plot(T2, f_est_new,'--k');
-
-    areaErrorOld = areaErrorOld + trapz(abs(f_answer-f_est_old))/results_leng;
-    areaErrorNew = areaErrorNew + trapz(abs(f_answer-f_est_new))/results_leng;
     
-    p = plot([actualMean actualMean], [0 0.1]);
-    p.LineWidth = 3;
-    p.Color = 'k';
-
-
-    hold off
-    set(gca, 'XScale', 'log')
-    xlabel('$T_2(s)$')
-    ylabel('$f(T_2)$')
-    title('Density Function of $T_2$');
-    legend('True','Estimated ILT','Estimated ILT+')
+    
+    
 end    
-areaErrorOld
-areaErrorNew  
 
+
+
+
+
+% tapered Areas comparison
+
+figure(9)
+x_axis = 0.1:0.01:0.9;
+compareTechniques(results_tpvILT(1,:), results_tpvIT(1,:), ...
+        results_tpvTrue(1,:), x_axis)
+figure(10)
+x_axis = 0:0.01:1;
+compareTechniques(results_tpvILT(2,:), results_tpvIT(2,:), ...
+        results_tpvTrue(2,:), x_axis)
+figure(11)
+x_axis = 0:0.01:1;
+compareTechniques(results_tpvILT(3,:), results_tpvIT(3,:), ...
+        results_tpvTrue(3,:), x_axis)    
+    
+% moments comparison
+figure(12)
+x_axis = 0.1:0.01:0.9;
+compareTechniques(results_momILT(1,:), results_momIT(1,:), ...
+        results_momTrue(1,:), x_axis)
+figure(13)
+x_axis = 0:0.01:1;
+compareTechniques(results_momILT(2,:), results_momIT(2,:), ...
+        results_momTrue(2,:), x_axis)
+figure(14)
+x_axis = 0:0.01:1;
+compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
+        results_momTrue(3,:), x_axis)  
+figure(15)
+x_axis = 0:0.01:1;
+compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
+        results_momTrue(4,:), x_axis)  
+
+    
+    
+    
+    
+%{
+subplot(3,1,1)
+hist(results_tpvTrue(1,:), x_axis);
+%bar(x_axis, h1)
+% [xb, yb] = stairs(x_axis,h1);
+% area(xb, yb)
+title('True')
+xlabel('$T2_{LM}$ [s]')
+ylabel('Frequency')
+
+subplot(3,1,2)
+hist(results_tpvIT(1,:), x_axis)
+title('IT')
+xlabel('$T2_{LM}$ [s]')
+ylabel('Frequency')
+
+subplot(3,1,3)
+hist(results_tpvILT(1,:), x_axis)
+
+title('ILT')
+xlabel('$T2_{LM}$ [s]')
+ylabel('Frequency')
+
+%}
+
+%{
 %--------------- plotting old T2 est/ mean
 
 figure(5)
@@ -166,7 +216,7 @@ p.Color = 'k';
 
 hold off
 legend('Frequency','True T2','Estimated ILT+')
-
+%}
 
 
 
@@ -184,25 +234,95 @@ ylabel('$f(T_2)$')
 title('Error in Density Function Prediction of $T_2$');
 legend('Estimated ILT','Estimated ILT+')
 %}
-errorOld = normalisedRootMeanSquareError(acquiredOldEst_mean,actualMean)
-errorNew = normalisedRootMeanSquareError(acquiredNewEst_mean,actualMean)
 
 
 
 %% function definitions:
 
-% Estimation of the density function from measured data. Retruns two
+%
+%
+% INPUTS:
+% IT
+% ILT
+% True
+% xaxis to plot on
+% OUTPUTS:
+% creates plot of estimations for each technique
+function compareTechniques(ILT, IT, true, x_axis)
+
+    subplot(2,1,1)
+    
+    hold on
+    h = histogram(IT);
+    p = plot([mean(true) mean(true)], [0 max(h.Values)]);
+    p.LineWidth = 2;
+    p.Color = 'k';
+    p = plot([mean(IT) mean(IT)], [0 max(h.Values)]);
+    p.LineWidth = 2;
+    p.Color = 'r';
+    
+    hold off
+    title('IT')
+    xlabel('$T2$ [s]')
+    ylabel('Frequency')
+    
+    ITError = normalisedRootMeanSquareError(mean(IT), mean(true))
+    
+    annotation('textbox',...
+    [.60 .6 .3 .3],...
+    'String',['NRMSE = ' num2str(ITError) '%'],...
+    'FontSize',9,...
+    'FontName','Times New Roman',...
+    'LineStyle','-',...
+    'LineWidth',0.3,...
+    'FitBoxToText','on');
+    
+    
+    subplot(2,1,2)
+    
+    hold on
+    h = histogram(ILT, x_axis);
+    p = plot([mean(true) mean(true)], [0 max(h.Values)]);
+    p.LineWidth = 2;
+    p.Color = 'k';
+    p = plot([mean(ILT) mean(ILT)], [0 max(h.Values)]);
+    p.LineWidth = 2;
+    p.Color = 'r';
+    hold off
+    title('ILT')
+    xlabel('$T2$ [s]')
+    ylabel('Frequency')
+
+    ILTError = normalisedRootMeanSquareError(mean(ILT), mean(true))
+
+    annotation('textbox',...
+    [.60 .1 .3 .3],...
+    'String',['NRMSE = ' num2str(ILTError) '%'],...
+    'FontSize',9,...
+    'FontName','Times New Roman',...
+    'LineStyle','-',...
+    'LineWidth',0.3,...
+    'FitBoxToText','on');
+
+
+end
+
+
+
+% Estimation of the density function from measured data. Returns two
 % results, the ILT method in Venk. 2002 (old) and the ILT+ method in Gruber
 % 2013 (new).
 % INPUTS: 
 %    m
 % OUTPUTS:
 %    area
-function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
-    noise_mean, f_answer, K2, N2, Ny, tE, T2, tau2, porosity)
+function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
+    tpdAreasVectILT, momentVectILT, tpdAreasTrue, momentVectTrue] ...
+    = evaluateIntegralTransforms(n_std_dev, noise_mean, f_answer, K2, ...
+    N2, Ny, tE, T2, tau2, porosity)
 
 
-    omega = linspace(0.1,1,12);
+    omega = linspace(-0.5,1,4);
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
@@ -216,79 +336,86 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         xlabel('Time 2  $ \tau_2 $ [s]')
         ylabel('$M(t)$')
     %}
+    
+    %---------- ESTIMATION with only measured data
+    
     % estimate tapered areas for different cut off times
-    tpdAreasVect = ones(size(T_cutoff,2), 2);
-    tpdAreaKern = ones(size(T_cutoff,2), Ny);
+    tpdAreasVectIntegralTransform = ones(size(T_cutoff,2), 2);
+    
     indx = 1;
     for Tc = T_cutoff
         [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
         
         k = exponentialHaarTransform(tE, ones(size(m)), n_std_dev, Tc, T2,tau2);
         tpd_var = n_std_dev^2 *(norm(k))^2;
+        tpdAreasVectIntegralTransform(indx,:) = [tpd, sqrt(tpd_var)];
         
-        
-        tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
-        tpdAreaKern(indx,:) = exponetialHaarTransformKernel(Tc,T2);
         indx = indx + 1;
     end
-    tpdAreasVect
+    tpdAreasVectIntegralTransform;
 
     % estimate different moments of the T2 distribution
-    momentVect = ones(size(omega,2), 2);
-    momentKern = ones(size(omega,2), Ny);
+    momentVectIntegralTransform = ones(size(omega,2), 2);
 
     indx = 1;
     for w = omega
 
-        kern = T2.^w;
-        momentKern(indx,:) = kern;
         [mom, mv] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
         
         % to estimate the uncertainty of the moment (eq 11)
         k = mellinTransform(ones(size(m)), w, tE, porosity, 0, n_std_dev);
         mom_var = n_std_dev^2 *(norm(k))^2;
         
-        momentVect(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
+        momentVectIntegralTransform(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
         indx = indx + 1;
     end
 
-    momentVect
+    momentVectIntegralTransform;
 
     % create compressed m vector of values for optimisation
     [m_comp, k_comp] = compressData(m,K2,10);
-
     m_comp = m_comp'; % compressed m vector
 
-
-    G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
-    L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [1000*(ones(size(m_comp)))/n_std_dev; 1./momentVect(:,2) ; ...
-        1./tpdAreasVect(:,2)]
-    W_opt = W_vect .* eye(size(G_opt,1));    
     
-    % normalise to unity, make it comparable to unweighted method
-    W_opt = W_opt/norm(W_opt);  
-    
-    %{
-    
-    
-    G_opt = [m_comp ; tpdAreasVect(:,1)]; %eq 13 pap4    
-    L_opt = [k_comp  ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [(1/n_std_dev)*(ones(size(m_comp)))  ; ...
-        tpdAreasVect(:,2)];
-    W_opt = W_vect .* eye(size(G_opt,1));      
-    
-     G_opt = [m_comp ]; %eq 13 pap4    
-    L_opt = [k_comp]; % eq 14 pap 4
-    W_vect = [(1/n_std_dev)*(ones(size(m_comp)))];
-    W_opt = W_vect .* eye(size(G_opt,1));    
-    
-    
-%}
-
-    f_est_new = optimisationInverseTransform(G_opt, L_opt, W_opt, n_std_dev);
     f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)), n_std_dev);
 
+    %----------- ESTIMATION with the ILT
+    
+    
+    tpdAreasVectILT = ones(size(T_cutoff,2), 1);
+    indx = 1;
+    for Tc = T_cutoff
+        [tpd] = actualTaperedArea(f_est_old, Tc,T2);
+        tpdAreasVectILT(indx,:) = [tpd];
+        indx = indx + 1;
+    end    
+    
+    momentVectILT = ones(size(omega,2), 1);
+    indx = 1;
+    for w = omega
+        mom = actualMoment(f_est_old, T2, w);
+        momentVectILT(indx) = mom;
+        indx = indx + 1;
+    end
+
+    %----------- TRUE DISTIRBUTION ANSWERS
+    tpdAreasTrue = ones(size(T_cutoff,2), 1);
+    indx = 1;
+    for Tc = T_cutoff
+        [tpd] = actualTaperedArea(f_answer, Tc,T2);
+        tpdAreasTrue(indx) = [tpd];
+        indx = indx + 1;
+    end    
+    
+    momentVectTrue = ones(size(omega,2), 1);
+    indx = 1;
+    for w = omega
+        mom = actualMoment(f_answer, T2, w);
+        momentVectTrue(indx) = mom;
+        indx = indx + 1;
+    end    
+    
+    
 end
 
 
@@ -363,6 +490,23 @@ function [area] = actualTaperedArea(f, Tc, T2)
     K = (C./gamma).*tanh(alpha*gamma);
     area = K * f;
 end
+
+% Calculate the actual moment of the distribution (fully polarised).
+% uses the definition of moment to compute it.
+% INPUTS: 
+%    f = Ny x 1 desnity function vector
+%    T2 = T2 relaxation axis
+%    omega = the wth moment being calculated
+% OUTPUTS:
+%    moment = the density function moment
+%  
+
+function moment = actualMoment(f, T2, omega)
+    porosity = trapz(f);
+    top_arg = (T2.^omega).*f';  
+    moment = trapz(top_arg) / porosity;
+end
+
 
 % Calculates the normalised root mean square error of two different
 % functions. Quantifies correctness.
