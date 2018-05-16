@@ -110,7 +110,7 @@ end
 % tapered Areas comparison
 
 figure(9)
-x_axis = 0.1:0.01:0.9;
+x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(1,:), results_tpvIT(1,:), ...
         results_tpvTrue(1,:), x_axis)
 figure(10)
@@ -124,7 +124,7 @@ compareTechniques(results_tpvILT(3,:), results_tpvIT(3,:), ...
     
 % moments comparison
 figure(12)
-x_axis = 0.1:0.01:0.9;
+x_axis = 0:0.01:1;
 compareTechniques(results_momILT(1,:), results_momIT(1,:), ...
         results_momTrue(1,:), x_axis)
 figure(13)
@@ -144,98 +144,6 @@ compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
     
     
     
-%{
-subplot(3,1,1)
-hist(results_tpvTrue(1,:), x_axis);
-%bar(x_axis, h1)
-% [xb, yb] = stairs(x_axis,h1);
-% area(xb, yb)
-title('True')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-subplot(3,1,2)
-hist(results_tpvIT(1,:), x_axis)
-title('IT')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-subplot(3,1,3)
-hist(results_tpvILT(1,:), x_axis)
-
-title('ILT')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-%}
-
-%{
-%--------------- plotting old T2 est/ mean
-
-figure(5)
-h1 = histogram(results_T2meanold);
-h1.BinWidth = 0.5e-2;
-title('ILT')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-
-acquiredOldEst_mean = mean(results_T2meanold);
-
-hold on
-p = plot([actualMean actualMean], [0 max(h1.Values)]);
-p.LineWidth = 3;
-p.Color = 'r';
-
-p = plot([acquiredOldEst_mean acquiredOldEst_mean], [0 max(h1.Values)]);
-p.LineWidth = 2.5;
-p.Color = 'k';
-
-hold off
-legend('Frequency','True T2','Estimated ILT')
-
-%--------------- plotting new T2 est/ mean
-
-figure(6)
-h2 = histogram(results_T2meannew);
-h2.BinWidth = 0.5e-2;
-title('ILT+')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-acquiredNewEst_mean = mean(results_T2meannew);
-
-hold on
-p = plot([actualMean actualMean], [0 max(h2.Values)]);
-p.LineWidth = 3;
-p.Color = 'r';
-
-p = plot([acquiredNewEst_mean acquiredNewEst_mean], [0 max(h2.Values)]);
-p.LineWidth = 2.5;
-p.Color = 'k';
-
-hold off
-legend('Frequency','True T2','Estimated ILT+')
-%}
-
-
-
-%{
-
-
-figure(51)
-hold on
-plot(T2, abs(f_answer-f_est_old),'-r');
-plot(T2, abs(f_answer-f_est_new),'--k');
-hold off
-set(gca, 'XScale', 'log')
-xlabel('$T_2(s)$')
-ylabel('$f(T_2)$')
-title('Error in Density Function Prediction of $T_2$');
-legend('Estimated ILT','Estimated ILT+')
-%}
-
-
 
 %% function definitions:
 
@@ -266,11 +174,14 @@ function compareTechniques(ILT, IT, true, x_axis)
     xlabel('$T2$ [s]')
     ylabel('Frequency')
     
-    ITError = normalisedRootMeanSquareError(mean(IT), mean(true))
+    ITError = normalisedRootMeanSquareError(mean(IT), mean(true));
+    ITStdDev = std(IT);
+    
+    str = sprintf('NRMSE = %4.2f %% \nSD = %4.2f',ITError, ITStdDev);
     
     annotation('textbox',...
     [.60 .6 .3 .3],...
-    'String',['NRMSE = ' num2str(ITError) '%'],...
+    'String',[str],...
     'FontSize',9,...
     'FontName','Times New Roman',...
     'LineStyle','-',...
@@ -293,11 +204,14 @@ function compareTechniques(ILT, IT, true, x_axis)
     xlabel('$T2$ [s]')
     ylabel('Frequency')
 
-    ILTError = normalisedRootMeanSquareError(mean(ILT), mean(true))
-
+    ILTError = normalisedRootMeanSquareError(mean(ILT), mean(true));
+    ILTStdDev = std(ILT);
+    
+    str = sprintf('NRMSE = %4.2f %% \nSD = %4.2f',ILTError, ILTStdDev);
+    
     annotation('textbox',...
     [.60 .1 .3 .3],...
-    'String',['NRMSE = ' num2str(ILTError) '%'],...
+    'String',[str],...
     'FontSize',9,...
     'FontName','Times New Roman',...
     'LineStyle','-',...
@@ -322,7 +236,7 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
     N2, Ny, tE, T2, tau2, porosity)
 
 
-    omega = linspace(-0.5,1,4);
+    omega = linspace(0.1,1,4);
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
