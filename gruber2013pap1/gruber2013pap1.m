@@ -181,8 +181,8 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     
     k = C.*n_term'.*exp(-beta * tau2);
     
-    %K = (C./gamma).*tanh(alpha*gamma);
-%{
+    K = (C./gamma).*tanh(alpha*gamma);
+
     figure(7)
     hold on
     plot (T2, K);
@@ -200,7 +200,7 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
     ylabel('$K(t,T_c)$')
     title('The Exponential Haar Transform Kernel $k(t,T_c = 0.033s)$');
     hold off
-  %} 
+   
     area = tE * (k' * M); % eq5
     area_uncert = (sigma_n)^2 *tE * ((tE * k')*k); % eq6
     

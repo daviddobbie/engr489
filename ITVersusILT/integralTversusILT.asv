@@ -52,18 +52,18 @@ f_answer = f_answer./porosity; % normalise to unity porosity
 %f_answer = zeros(Ny,1);
 %f_answer(500) = 1;
 
-%{
+
 figure(1)
 plot(T2, f_answer);
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
-%}
+
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.2;
+n_std_dev = 0.1;
 
 %calc the logarithmic mean
 actualMean = exp((log(T2))*f_answer)
@@ -110,7 +110,7 @@ end
 % tapered Areas comparison
 
 figure(9)
-x_axis = 0.1:0.01:0.9;
+x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(1,:), results_tpvIT(1,:), ...
         results_tpvTrue(1,:), x_axis)
 figure(10)
@@ -122,9 +122,9 @@ x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(3,:), results_tpvIT(3,:), ...
         results_tpvTrue(3,:), x_axis)    
     
-% moments comaprison
+% moments comparison
 figure(12)
-x_axis = 0.1:0.01:0.9;
+x_axis = 0:0.01:1;
 compareTechniques(results_momILT(1,:), results_momIT(1,:), ...
         results_momTrue(1,:), x_axis)
 figure(13)
@@ -144,98 +144,6 @@ compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
     
     
     
-%{
-subplot(3,1,1)
-hist(results_tpvTrue(1,:), x_axis);
-%bar(x_axis, h1)
-% [xb, yb] = stairs(x_axis,h1);
-% area(xb, yb)
-title('True')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-subplot(3,1,2)
-hist(results_tpvIT(1,:), x_axis)
-title('IT')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-subplot(3,1,3)
-hist(results_tpvILT(1,:), x_axis)
-
-title('ILT')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-%}
-
-%{
-%--------------- plotting old T2 est/ mean
-
-figure(5)
-h1 = histogram(results_T2meanold);
-h1.BinWidth = 0.5e-2;
-title('ILT')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-
-acquiredOldEst_mean = mean(results_T2meanold);
-
-hold on
-p = plot([actualMean actualMean], [0 max(h1.Values)]);
-p.LineWidth = 3;
-p.Color = 'r';
-
-p = plot([acquiredOldEst_mean acquiredOldEst_mean], [0 max(h1.Values)]);
-p.LineWidth = 2.5;
-p.Color = 'k';
-
-hold off
-legend('Frequency','True T2','Estimated ILT')
-
-%--------------- plotting new T2 est/ mean
-
-figure(6)
-h2 = histogram(results_T2meannew);
-h2.BinWidth = 0.5e-2;
-title('ILT+')
-xlabel('$T2_{LM}$ [s]')
-ylabel('Frequency')
-
-acquiredNewEst_mean = mean(results_T2meannew);
-
-hold on
-p = plot([actualMean actualMean], [0 max(h2.Values)]);
-p.LineWidth = 3;
-p.Color = 'r';
-
-p = plot([acquiredNewEst_mean acquiredNewEst_mean], [0 max(h2.Values)]);
-p.LineWidth = 2.5;
-p.Color = 'k';
-
-hold off
-legend('Frequency','True T2','Estimated ILT+')
-%}
-
-
-
-%{
-
-
-figure(51)
-hold on
-plot(T2, abs(f_answer-f_est_old),'-r');
-plot(T2, abs(f_answer-f_est_new),'--k');
-hold off
-set(gca, 'XScale', 'log')
-xlabel('$T_2(s)$')
-ylabel('$f(T_2)$')
-title('Error in Density Function Prediction of $T_2$');
-legend('Estimated ILT','Estimated ILT+')
-%}
-
-
 
 %% function definitions:
 
@@ -250,52 +158,70 @@ legend('Estimated ILT','Estimated ILT+')
 % creates plot of estimations for each technique
 function compareTechniques(ILT, IT, true, x_axis)
 
+    min_val = min([ILT IT])
+    max_val = max([ILT IT])
+
     subplot(2,1,1)
     
     hold on
-    h = histogram(IT);
-    p = plot([mean(true) mean(true)], [0 max(h.Values)]);
+    h1 = histogram(IT, 30, 'BinLimits', [min_val max_val]);
+    p = plot([mean(true) mean(true)], [0 max(h1.Values)]);
     p.LineWidth = 2;
     p.Color = 'k';
-    p = plot([mean(IT) mean(IT)], [0 max(h.Values)]);
+    p = plot([mean(IT) mean(IT)], [0 max(h1.Values)]);
     p.LineWidth = 2;
     p.Color = 'r';
     
-    hold off
+
     title('IT')
     xlabel('$T2$ [s]')
     ylabel('Frequency')
     
-    ITError = normalisedRootMeanSquareError(mean(IT), mean(true))
+    ITError = normalisedRootMeanSquareError(mean(IT), mean(true));
+    ITStdDev = (std(IT)/mean(IT))*100;
     
+    str = sprintf('NRMSE = %4.2f %% \nNSD = %4.2f %%',ITError, ITStdDev);
+    dim = [0.832196669275554 0.900822892171908 0.172638431822438 0.0906800988038782];
     annotation('textbox',...
     dim,...
-    'String',{'NRMSE = ',[num2str(ITError)]},...
-    'FontSize',10,...
+    'String',[str],...
+    'FontSize',8,...
     'FontName','Times New Roman',...
-    'LineStyle','--',...
-    'LineWidth',2);
-    
+    'LineStyle','none',...
+    'FitBoxToText','on');
+
+     hold off  
     
     subplot(2,1,2)
     
     hold on
-    h = histogram(ILT, x_axis);
-    p = plot([mean(true) mean(true)], [0 max(h.Values)]);
+    
+    h2 = histogram(ILT, 30, 'BinLimits', [min_val max_val]);
+    p = plot([mean(true) mean(true)], [0 max(h2.Values)]);
     p.LineWidth = 2;
     p.Color = 'k';
-    p = plot([mean(ILT) mean(ILT)], [0 max(h.Values)]);
+    p = plot([mean(ILT) mean(ILT)], [0 max(h2.Values)]);
     p.LineWidth = 2;
     p.Color = 'r';
-    hold off
     title('ILT')
     xlabel('$T2$ [s]')
     ylabel('Frequency')
+
+    ILTError = normalisedRootMeanSquareError(mean(ILT), mean(true));
+    ILTStdDev = (std(ILT)/mean(ILT))*100;
     
-    
-    
-    
-    ILTError = normalisedRootMeanSquareError(mean(ILT), mean(true))
+    str = sprintf('NRMSE = %4.2f %% \nNSD = %4.2f %%',ILTError, ILTStdDev);
+    dim = [0.826806127531373 0.438287153502255 0.172638431822438 0.0906800988038782];
+    annotation('textbox',...
+    dim,...
+    'String',[str],...
+    'FontSize',8,...
+    'FontName','Times New Roman',...
+    'LineStyle','none',...
+    'FitBoxToText','on');
+
+    hold off
+
 end
 
 
@@ -313,21 +239,21 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
     N2, Ny, tE, T2, tau2, porosity)
 
 
-    omega = linspace(-0.5,1,4);
+    omega = linspace(0.1,1,4);
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
     m = K2*f_answer + noise;  
-    %{
+    
         figure(2)
         hold on
-        plot(m);
+        plot(tau2, m);
         hold off
         title('Measured Signal')
-        xlabel('Time 2  $ \tau_2 $ [s]')
-        ylabel('$M(t)$')
-    %}
+        xlabel('Time Elapsed [s]')
+        ylabel('$m(t)$')
     
+    %}
     %---------- ESTIMATION with only measured data
     
     % estimate tapered areas for different cut off times

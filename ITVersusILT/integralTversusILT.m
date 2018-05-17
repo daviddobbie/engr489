@@ -63,7 +63,7 @@ title('Correct Density Function of $T_2$');
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.2;
+n_std_dev = 0.1;
 
 %calc the logarithmic mean
 actualMean = exp((log(T2))*f_answer)
@@ -158,66 +158,69 @@ compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
 % creates plot of estimations for each technique
 function compareTechniques(ILT, IT, true, x_axis)
 
+    min_val = min([ILT IT])
+    max_val = max([ILT IT])
+
     subplot(2,1,1)
     
     hold on
-    h = histogram(IT);
-    p = plot([mean(true) mean(true)], [0 max(h.Values)]);
+    h1 = histogram(IT, 30, 'BinLimits', [min_val max_val]);
+    p = plot([mean(true) mean(true)], [0 max(h1.Values)]);
     p.LineWidth = 2;
     p.Color = 'k';
-    p = plot([mean(IT) mean(IT)], [0 max(h.Values)]);
+    p = plot([mean(IT) mean(IT)], [0 max(h1.Values)]);
     p.LineWidth = 2;
     p.Color = 'r';
     
-    hold off
+
     title('IT')
     xlabel('$T2$ [s]')
     ylabel('Frequency')
     
     ITError = normalisedRootMeanSquareError(mean(IT), mean(true));
-    ITStdDev = std(IT);
+    ITStdDev = (std(IT)/mean(IT))*100;
     
-    str = sprintf('NRMSE = %4.2f %% \nSD = %4.2f',ITError, ITStdDev);
-    
+    str = sprintf('NRMSE = %4.2f %% \nNSD = %4.2f %%',ITError, ITStdDev);
+    dim = [0.832196669275554 0.900822892171908 0.172638431822438 0.0906800988038782];
     annotation('textbox',...
-    [.60 .6 .3 .3],...
+    dim,...
     'String',[str],...
-    'FontSize',9,...
+    'FontSize',8,...
     'FontName','Times New Roman',...
-    'LineStyle','-',...
-    'LineWidth',0.3,...
+    'LineStyle','none',...
     'FitBoxToText','on');
-    
+
+     hold off  
     
     subplot(2,1,2)
     
     hold on
-    h = histogram(ILT, x_axis);
-    p = plot([mean(true) mean(true)], [0 max(h.Values)]);
+    
+    h2 = histogram(ILT, 30, 'BinLimits', [min_val max_val]);
+    p = plot([mean(true) mean(true)], [0 max(h2.Values)]);
     p.LineWidth = 2;
     p.Color = 'k';
-    p = plot([mean(ILT) mean(ILT)], [0 max(h.Values)]);
+    p = plot([mean(ILT) mean(ILT)], [0 max(h2.Values)]);
     p.LineWidth = 2;
     p.Color = 'r';
-    hold off
     title('ILT')
     xlabel('$T2$ [s]')
     ylabel('Frequency')
 
     ILTError = normalisedRootMeanSquareError(mean(ILT), mean(true));
-    ILTStdDev = std(ILT);
+    ILTStdDev = (std(ILT)/mean(ILT))*100;
     
-    str = sprintf('NRMSE = %4.2f %% \nSD = %4.2f',ILTError, ILTStdDev);
-    
+    str = sprintf('NRMSE = %4.2f %% \nNSD = %4.2f %%',ILTError, ILTStdDev);
+    dim = [0.826806127531373 0.438287153502255 0.172638431822438 0.0906800988038782];
     annotation('textbox',...
-    [.60 .1 .3 .3],...
+    dim,...
     'String',[str],...
-    'FontSize',9,...
+    'FontSize',8,...
     'FontName','Times New Roman',...
-    'LineStyle','-',...
-    'LineWidth',0.3,...
+    'LineStyle','none',...
     'FitBoxToText','on');
 
+    hold off
 
 end
 
@@ -236,7 +239,8 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
     N2, Ny, tE, T2, tau2, porosity)
 
 
-    omega = linspace(0.1,1,4);
+    %omega = linspace(0.1,1,4);
+    omega = [-0.1 0.1 0.5 1];
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
@@ -244,13 +248,13 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
     %{
         figure(2)
         hold on
-        plot(m);
+        plot(tau2, m);
         hold off
         title('Measured Signal')
-        xlabel('Time 2  $ \tau_2 $ [s]')
-        ylabel('$M(t)$')
-    %}
+        xlabel('Time Elapsed [s]')
+        ylabel('$m(t)$')
     
+    %}
     %---------- ESTIMATION with only measured data
     
     % estimate tapered areas for different cut off times
