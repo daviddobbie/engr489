@@ -158,8 +158,8 @@ compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
 % creates plot of estimations for each technique
 function compareTechniques(ILT, IT, true, x_axis)
 
-    min_val = min([ILT IT])
-    max_val = max([ILT IT])
+    min_val = min([ILT IT]);
+    max_val = max([ILT IT]);
 
     subplot(2,1,1)
     

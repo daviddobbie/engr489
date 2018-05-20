@@ -67,7 +67,7 @@ title('Correct Density Function of $T_2$');
 
 % generate the noise
 noise_mean = 0;
-n_std_dev = 0.2;
+n_std_dev = 0.1;
 
 %calc the logarithmic mean
 actualMean = exp((log(T2))*f_answer)
@@ -122,9 +122,19 @@ areaErrorNew
 
 %--------------- plotting old T2 est/ mean
 
+
+
+
+
+
 figure(5)
-h1 = histogram(results_T2meanold);
-h1.BinWidth = 0.5e-2;
+
+subplot(2,1,1)
+min_val = min([results_T2meanold results_T2meannew]);
+max_val = max([results_T2meanold results_T2meannew]);
+
+
+h1 = histogram(results_T2meanold, 30, 'BinLimits', [min_val max_val]);
 title('ILT')
 xlabel('$T2_{LM}$ [s]')
 ylabel('Frequency')
@@ -135,20 +145,21 @@ acquiredOldEst_mean = mean(results_T2meanold);
 hold on
 p = plot([actualMean actualMean], [0 max(h1.Values)]);
 p.LineWidth = 3;
-p.Color = 'r';
+p.Color = 'k';
 
 p = plot([acquiredOldEst_mean acquiredOldEst_mean], [0 max(h1.Values)]);
 p.LineWidth = 2.5;
-p.Color = 'k';
+p.Color = 'r';
 
 hold off
 legend('Frequency','True T2','Estimated ILT')
 
 %--------------- plotting new T2 est/ mean
 
-figure(6)
-h2 = histogram(results_T2meannew);
-h2.BinWidth = 0.5e-2;
+subplot(2,1,2)
+
+
+h2 = histogram(results_T2meannew, 30, 'BinLimits', [min_val max_val]);
 title('ILT+')
 xlabel('$T2_{LM}$ [s]')
 ylabel('Frequency')
@@ -158,14 +169,15 @@ acquiredNewEst_mean = mean(results_T2meannew);
 hold on
 p = plot([actualMean actualMean], [0 max(h2.Values)]);
 p.LineWidth = 3;
-p.Color = 'r';
+p.Color = 'k';
 
 p = plot([acquiredNewEst_mean acquiredNewEst_mean], [0 max(h2.Values)]);
 p.LineWidth = 2.5;
-p.Color = 'k';
+p.Color = 'r';
 
 hold off
 legend('Frequency','True T2','Estimated ILT+')
+
 
 
 
@@ -195,9 +207,19 @@ errorNew = normalisedRootMeanSquareError(acquiredNewEst_mean,actualMean)
 % results, the ILT method in Venk. 2002 (old) and the ILT+ method in Gruber
 % 2013 (new).
 % INPUTS: 
-%    m
+%    noise standard deviation
+%    noise mean
+%    density function answer
+%    K2 kernel
+%    N2 size of t axis
+%    Ny size of T2 axis
+%    tE time between samples
+%    T2 relaxation time axis
+%    tau2 time axis
+%    porosity of density function
 % OUTPUTS:
-%    area
+%    f_est_old estimation of density function with ILT old method
+%    f_est_new estimation of density function with ILT+ new method
 function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     noise_mean, f_answer, K2, N2, Ny, tE, T2, tau2, porosity)
 
@@ -216,6 +238,8 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         xlabel('Time 2  $ \tau_2 $ [s]')
         ylabel('$M(t)$')
     %}
+    
+    
     % estimate tapered areas for different cut off times
     tpdAreasVect = ones(size(T_cutoff,2), 2);
     tpdAreaKern = ones(size(T_cutoff,2), Ny);
@@ -223,8 +247,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     for Tc = T_cutoff
         [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
         
-        k = exponentialHaarTransform(tE, ones(size(m)), n_std_dev, Tc, T2,tau2);
-        tpd_var = n_std_dev^2 *(norm(k))^2;
+        tpd_var = n_std_dev^2 *(norm(m))^2;
         
         
         tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
@@ -246,7 +269,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         
         % to estimate the uncertainty of the moment (eq 11)
         k = mellinTransform(ones(size(m)), w, tE, porosity, 0, n_std_dev);
-        mom_var = n_std_dev^2 *(norm(k))^2;
+        mom_var = mv;
         
         momentVect(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
         indx = indx + 1;
@@ -262,12 +285,12 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [1*(ones(size(m_comp)))/n_std_dev; 1./momentVect(:,2) ; ...
-        1./tpdAreasVect(:,2)]
+    W_vect = [(ones(size(m_comp)))/n_std_dev; 0./momentVect(:,2) ; ...
+        0./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
     
     % normalise to unity, make it comparable to unweighted method
-    W_opt = W_opt/norm(W_opt);  
+    W_opt = W_opt/norm(W_opt);
     
     %{
     
@@ -285,9 +308,10 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     
     
 %}
-
+ 
+    
     f_est_new = optimisationInverseTransform(G_opt, L_opt, W_opt, n_std_dev);
-    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,2)), n_std_dev);
+    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,1)), n_std_dev);
 
 end
 
@@ -442,15 +466,19 @@ end
 % 
 function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     alpha = 1000;
+        
+    G = W*G;
+    L = W*L;    
+    
+    N = nnz(W);
+    
     Ny = size(L,2);
     c = ones([length(G)  1]);
 
     % lexiographical sorting of the m matrix
     %Glex = sortrows(reshape(G,1,[]).');
 
-    G = W*G;
 
-    L = W*L;
     %K2 = sortrows(reshape(K2,Ny,N2).');
 
     alpha_hist = [];
@@ -465,7 +493,11 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
         %made symmetric and semi-positive definite
         c = inv(L_square + alpha*eye(length(G))); %eq 29
         c = c*G;
-        alpha =  n_std_dev * sqrt(length(G))/ norm(c); %implement eq 17 BRD paper  
+        
+
+        
+        alpha =  n_std_dev * sqrt(N)/ norm(c);
+        %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
     end
     hold off
