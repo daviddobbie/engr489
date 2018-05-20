@@ -247,7 +247,9 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     for Tc = T_cutoff
         [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
         
-        tpd_var = n_std_dev^2 *(norm(m))^2;
+        k = exponetialHaarTransformKernel(Tc, T2);
+        
+        tpd_var = n_std_dev^2 *(norm(k))^2;
         
         
         tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
@@ -267,15 +269,16 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         momentKern(indx,:) = kern;
         [mom, mv] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
         
+        
         % to estimate the uncertainty of the moment (eq 11)
         k = mellinTransform(ones(size(m)), w, tE, porosity, 0, n_std_dev);
-        mom_var = mv;
+        mom_var = (n_std_dev)^2 * norm(k)^2;
         
         momentVect(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
         indx = indx + 1;
     end
 
-    momentVect
+    momentVect;
 
     % create compressed m vector of values for optimisation
     [m_comp, k_comp] = compressData(m,K2,10);
@@ -286,7 +289,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
     W_vect = [(ones(size(m_comp)))/n_std_dev; 0./momentVect(:,2) ; ...
-        0./tpdAreasVect(:,2)]
+        1./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
     
     % normalise to unity, make it comparable to unweighted method
@@ -311,7 +314,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
  
     
     f_est_new = optimisationInverseTransform(G_opt, L_opt, W_opt, n_std_dev);
-    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(M_opt,1)), n_std_dev);
+    f_est_old = optimisationInverseTransform(m_comp, k_comp, eye(size(m_comp,1)), n_std_dev);
 
 end
 
@@ -466,15 +469,19 @@ end
 % 
 function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     alpha = 1000;
+        
+    G = W*G;
+    L = W*L;    
+    
+    N = nnz(W);
+    
     Ny = size(L,2);
     c = ones([length(G)  1]);
 
     % lexiographical sorting of the m matrix
     %Glex = sortrows(reshape(G,1,[]).');
 
-    G = W*G;
 
-    L = W*L;
     %K2 = sortrows(reshape(K2,Ny,N2).');
 
     alpha_hist = [];
@@ -489,7 +496,11 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
         %made symmetric and semi-positive definite
         c = inv(L_square + alpha*eye(length(G))); %eq 29
         c = c*G;
-        alpha =  n_std_dev * sqrt(length(G))/ norm(c); %implement eq 17 BRD paper  
+        
+
+        
+        alpha =  n_std_dev * sqrt(N)/ norm(c);
+        %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
     end
     hold off

@@ -94,7 +94,6 @@ for i = 1:results_leng
 %     results_BFVold(i) = mean(f_est_old);
 %     results_BFVnew(i) = mean(f_est_new);    
     
-    i
     figure(50)
     clf
     hold on
@@ -247,7 +246,9 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     for Tc = T_cutoff
         [tpd, tpd_var] = exponentialHaarTransform(tE, m, n_std_dev, Tc, T2,tau2);
         
-        tpd_var = n_std_dev^2 *(norm(m))^2;
+        k = exponetialHaarTransformKernel(Tc, T2);
+        
+        tpd_var = n_std_dev^2 *(norm(k))^2;
         
         
         tpdAreasVect(indx,:) = [tpd, sqrt(tpd_var)];
@@ -267,15 +268,16 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         momentKern(indx,:) = kern;
         [mom, mv] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
         
+        
         % to estimate the uncertainty of the moment (eq 11)
         k = mellinTransform(ones(size(m)), w, tE, porosity, 0, n_std_dev);
-        mom_var = mv;
+        mom_var = (n_std_dev)^2 * norm(k)^2;
         
         momentVect(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
         indx = indx + 1;
     end
 
-    momentVect
+    momentVect;
 
     % create compressed m vector of values for optimisation
     [m_comp, k_comp] = compressData(m,K2,10);
@@ -286,7 +288,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
     W_vect = [(ones(size(m_comp)))/n_std_dev; 0./momentVect(:,2) ; ...
-        0./tpdAreasVect(:,2)]
+        1./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
     
     % normalise to unity, make it comparable to unweighted method
