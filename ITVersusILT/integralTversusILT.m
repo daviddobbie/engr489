@@ -109,7 +109,7 @@ end
 
 
 % tapered Areas comparison
-%{
+
 figure(9)
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(1,:), results_tpvIT(1,:), ...
@@ -122,7 +122,7 @@ figure(11)
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(3,:), results_tpvIT(3,:), ...
         results_tpvTrue(3,:), x_axis)    
-    %}
+ 
 % moments comparison
 figure(12)
 clf

@@ -35,18 +35,18 @@ tau2 = (1:N2)'*tE;
 
 K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
-% RECREATE MODEL 1 from Gruber et al pap 4
+% RECREATE MODEL 2 from Gruber et al pap 4
 
 %generate the density fn
-T2_mean1 = 0.01
-T2_var1 = 0.04
+T2_mean1 = 0.03
+T2_var1 = 0.03
 
-T2_mean2 = 0.15
-T2_var2 = 0.08
+T2_mean2 = 0.006
+T2_var2 = 0.04
 
 % formation of distribution
-f_answer = .1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
-f_answer = f_answer + .25*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
+f_answer = .25*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
+f_answer = f_answer + .75*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
 
 f_answer = f_answer./trapz(f_answer); % normalise to unity porosity
@@ -83,12 +83,15 @@ results_BFVnew = zeros(1,results_leng);
 areaErrorOld = 0;
 areaErrorNew = 0;
 
+Tc = 0.033;
+
 for i = 1:results_leng
     [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
     f_answer, K2, N2, Ny, tE, T2, tau2, porosity); 
 
-    results_T2meanold(i) = exp((log(T2))*f_est_old); % weighted mean w/ T2 axis
-    results_T2meannew(i) = exp((log(T2))*f_est_new); % weighted mean w/ T2 axis 
+    results_T2meanold(i) = exp((log(T2))*f_est_old); % weighted log mean w/ T2 axis
+    results_T2meannew(i) = exp((log(T2))*f_est_new); % weighted log mean w/ T2 axis 
+       
     
 %     results_BFVold(i) = mean(f_est_old);
 %     results_BFVnew(i) = mean(f_est_new);    
@@ -115,10 +118,10 @@ for i = 1:results_leng
     title('Density Function of $T_2$');
     legend('True','Estimated ILT','Estimated ILT+')
 end    
-areaErrorOld
-areaErrorNew  
 
 %--------------- plotting old T2 est/ mean
+
+
 
 
 
@@ -176,8 +179,10 @@ p.Color = 'r';
 hold off
 legend('Frequency','True T2','Estimated ILT+')
 
-
-
+ILT_NSD = (std(results_T2meanold)/mean(results_T2meanold))*100
+ILTX_NSD = (std(results_T2meannew)/mean(results_T2meannew))*100
+ILT_NRMSE = normalisedRootMeanSquareError(acquiredOldEst_mean,actualMean)
+ILTX_NRMSE = normalisedRootMeanSquareError(acquiredNewEst_mean,actualMean)
 
 
 %{
@@ -194,8 +199,7 @@ ylabel('$f(T_2)$')
 title('Error in Density Function Prediction of $T_2$');
 legend('Estimated ILT','Estimated ILT+')
 %}
-errorOld = normalisedRootMeanSquareError(acquiredOldEst_mean,actualMean)
-errorNew = normalisedRootMeanSquareError(acquiredNewEst_mean,actualMean)
+
 
 
 
@@ -265,7 +269,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
         kern = T2.^w/porosity;
         momentKern(indx,:) = kern;
-        [mom, mom_var] = mellinTransform(m, w, tE, porosity, 0, n_std_dev);
+        [mom, mom_var] = mellinTransform(m, w, tE, porosity, n_std_dev, n_std_dev);
         
         
         % to estimate the uncertainty of the moment (eq 11)
@@ -276,7 +280,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         indx = indx + 1;
     end
 
-    momentVect;
+    momentVect
 
     % create compressed m vector of values for optimisation
     [m_comp, k_comp] = compressData(m,K2,10);
@@ -286,12 +290,13 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [(ones(size(m_comp)))/n_std_dev; 0.0010./momentVect(:,2) ; ...
-        1./tpdAreasVect(:,2)]
+    W_vect = [1*(ones(size(m_comp)))/n_std_dev; 0.01./momentVect(:,2) ; ...
+        1./tpdAreasVect(:,2)];
     W_opt = W_vect .* eye(size(G_opt,1));    
     
     % normalise to unity, make it comparable to unweighted method
-    W_opt = W_opt/norm(W_opt);
+    %W_opt = 4*W_opt;
+    W_opt = W_opt/(norm(W_opt));
     
     %{
     
@@ -468,7 +473,14 @@ end
 function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     alpha = 1000;
         
-    G = W*G
+    G = W*G;
+    
+    if(length(G) > 11)
+        figure(34)
+        clf
+        plot(abs(G))   
+    end
+    
     L = W*L;    
     
     N = nnz(W);
@@ -498,11 +510,15 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
 
         
         alpha =  n_std_dev * sqrt(N)/ norm(c);
+        alpha_hist = [alpha_hist alpha];
         %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
     end
     hold off
-
+    
+    figure(77)
+    plot(alpha_hist)
+    
     f_est = L'*c;
     under = min(f_est);
     f_est = f_est - under;
