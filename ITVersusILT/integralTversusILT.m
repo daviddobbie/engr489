@@ -8,9 +8,8 @@
 %original ILT method in Venk 2002.
 
 
-close all
+
 clc
-clf
 clear
 
 set(0,'defaultTextInterpreter','latex');
@@ -45,8 +44,10 @@ f_answer = .1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
 f_answer = f_answer + .25*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
 
+
+f_answer = f_answer./trapz(f_answer); % normalise to unity porosity
 porosity = trapz(f_answer);
-f_answer = f_answer./porosity; % normalise to unity porosity
+
 
 %delta distribut
 %f_answer = zeros(Ny,1);
@@ -70,7 +71,7 @@ actualMean = exp((log(T2))*f_answer)
 
 %--------------- running simulations and results
 
-results_leng = 100;
+results_leng = 50;
 results_tpvIT = zeros(3,results_leng);
 results_momIT = zeros(4,results_leng);
 
@@ -108,7 +109,7 @@ end
 
 
 % tapered Areas comparison
-
+%{
 figure(9)
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(1,:), results_tpvIT(1,:), ...
@@ -121,24 +122,36 @@ figure(11)
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(3,:), results_tpvIT(3,:), ...
         results_tpvTrue(3,:), x_axis)    
-    
+    %}
 % moments comparison
 figure(12)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_momILT(1,:), results_momIT(1,:), ...
         results_momTrue(1,:), x_axis)
+            subplot(2,1,1)
+    title('MT $\omega$ = -0.5')
 figure(13)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_momILT(2,:), results_momIT(2,:), ...
         results_momTrue(2,:), x_axis)
+            subplot(2,1,1)
+        title('MT $\omega$ = 0.1')
 figure(14)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
-        results_momTrue(3,:), x_axis)  
+        results_momTrue(3,:), x_axis) 
+        subplot(2,1,1)
+        title('MT $\omega$ = 0.5')
 figure(15)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_momILT(3,:), results_momIT(3,:), ...
-        results_momTrue(4,:), x_axis)  
+        results_momTrue(4,:), x_axis) 
+            subplot(2,1,1)
+        title('MT $\omega$ = 1')
 
     
     
@@ -240,7 +253,7 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
 
 
     %omega = linspace(0.1,1,4);
-    omega = [-0.1 0.1 0.5 1];
+    omega = [-0.5 0.1 0.5 1];
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
@@ -561,7 +574,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         moment = 1;
         var = 0;
     elseif omega > 0
-        tau_min = tE^omega; %eq 19a
+        tau_min = (tE)^omega; %eq 19a
         k = tau_min / gamma(omega+1); %eq 19a
         
         n = 2:1:N-1;
@@ -576,9 +589,9 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         % measurement (leads to complex result from log)
         moment = k + 1/(gamma(omega + 1)*poro) * (delta*m); % eq18
               
-        
+        %moment = 1/(gamma(omega)*poro) * tE*(((tE:tE:(N)*tE).^(omega - 1))*m)
         %eq 23
-        var = ((delta.^2)*(delta.^2)'/gamma(omega+1)^2)*(sigma_n/poro)^2;
+        var = (sum(delta.^2)/gamma(omega+1)^2)*(sigma_n/poro)^2;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         return;
     elseif -1 < omega && omega < 0  %implement eq 22
@@ -593,6 +606,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
         delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
         delta = [delta_1 delta_mid delta_N];
+
           
         %estimate 1st derivate of M at 0 with polyfit
         coeffc = polyfit(1:100, m(1:100)', 1);
@@ -604,9 +618,9 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         
         
+       moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m); 
         
-        
-        moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);       
+       % moment =   (1/(gamma(omega + 1)*poro)) * (const + delta*m);       
         
         
        if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
@@ -620,7 +634,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         
         
         
-        var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2 + var;
+        var = (sum(delta.^2)/(gamma(omega+1))^2)*(sigma_n/poro)^2 + var;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         var = var + ((omega*tau_min^((omega+1)/omega))/gamma(omega + 2)) * (a1_stddev / poro)^2;
         return;
