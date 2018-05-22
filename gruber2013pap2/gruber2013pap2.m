@@ -18,7 +18,8 @@ clf
 clear
 
 set(0,'defaultTextInterpreter','latex');
- 
+set(0,'defaultAxesFontSize',18)
+set(0,'DefaultAxesTitleFontSizeMultiplier', 1.2)
 
 
 %% init variables
