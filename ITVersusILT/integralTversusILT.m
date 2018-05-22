@@ -32,12 +32,33 @@ K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
 % RECREATE MODEL 1 from Gruber et al pap 4
 
+
+
+%generate the density fn
+T2_mean1 = 0.03
+T2_var1 = 0.03
+
+T2_mean2 = 0.006
+T2_var2 = 0.04
+
+
+f_answer = .25*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
+f_answer = f_answer + .75*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
+
+
+f_answer = f_answer./trapz(f_answer); % normalise to unity porosity
+porosity = trapz(f_answer);
+
+
+%{
+
 %generate the density fn
 T2_mean1 = 0.01
 T2_var1 = 0.04
 
 T2_mean2 = 0.15
 T2_var2 = 0.08
+
 
 % formation of distribution
 f_answer = .1*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
@@ -47,7 +68,7 @@ f_answer = f_answer + .25*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
 f_answer = f_answer./trapz(f_answer); % normalise to unity porosity
 porosity = trapz(f_answer);
-
+%}
 
 %delta distribut
 %f_answer = zeros(Ny,1);
@@ -111,17 +132,26 @@ end
 % tapered Areas comparison
 
 figure(9)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(1,:), results_tpvIT(1,:), ...
         results_tpvTrue(1,:), x_axis)
+                subplot(2,1,1)
+        title('EHT $T_c$ = 0.01')
 figure(10)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(2,:), results_tpvIT(2,:), ...
         results_tpvTrue(2,:), x_axis)
+                subplot(2,1,1)
+        title('EHT $T_c$ = 0.1')    
 figure(11)
+clf
 x_axis = 0:0.01:1;
 compareTechniques(results_tpvILT(3,:), results_tpvIT(3,:), ...
-        results_tpvTrue(3,:), x_axis)    
+        results_tpvTrue(3,:), x_axis)
+                subplot(2,1,1)
+        title('EHT $T_c$ = 1')
  
 % moments comparison
 figure(12)
