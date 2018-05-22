@@ -135,7 +135,7 @@ for i = 1:results_leng
     xlabel('$T_2(s)$')
     ylabel('$f(T_2)$')
     title('Density Function of $T_2$');
-    legend('True','Estimated ILT','Estimated ILT+', 'Logarithmic Mean', 'T_c')
+    legend('True','Estimated ILT','Estimated ILT+', '', 'T_c')
 end    
 
 %--------------- plotting old T2 est/ mean
