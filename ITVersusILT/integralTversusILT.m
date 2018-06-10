@@ -93,7 +93,7 @@ actualMean = exp((log(T2))*f_answer)
 
 %--------------- running simulations and results
 
-results_leng = 50;
+results_leng = 10000;
 results_tpvIT = zeros(3,results_leng);
 results_momIT = zeros(4,results_leng);
 
@@ -108,8 +108,9 @@ areaErrorOld = 0;
 areaErrorNew = 0;
 
 
-
+tic
 for i = 1:results_leng
+    i
     [tpvIT momIT tpvILT momILT tpvTrue momTrue] =  ...
         evaluateIntegralTransforms(n_std_dev, noise_mean, f_answer, ...
         K2, N2, Ny, tE, T2, tau2, porosity); 
@@ -125,7 +126,7 @@ for i = 1:results_leng
     
     
 end    
-
+toc
 
 
 
@@ -305,7 +306,7 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
     m = K2*f_answer + noise;  
-    
+    %{
         figure(2)
         clf
         hold on
@@ -314,7 +315,7 @@ function [tpdAreasVectIntegralTransform, momentVectIntegralTransform, ...
         %title('Measured Signal')
         xlabel('t [s]')
         ylabel('$m(t)$')
-    
+    %}
     
     %---------- ESTIMATION with only measured data
     

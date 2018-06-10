@@ -18,6 +18,7 @@ clf
 clear
 
 set(0,'defaultTextInterpreter','latex');
+set(0,'DefaultAxesTitleFontSizeMultiplier', 1)
 set(0,'defaultAxesFontSize',18)
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1.2)
 
@@ -89,7 +90,7 @@ actualBFV = mask_Tc*f_answer;
 
 %--------------- running simulations and results
 
-results_leng = 100;
+results_leng = 10000;
 results_T2meanold = zeros(1,results_leng);
 results_T2meannew = zeros(1,results_leng);
 
@@ -102,6 +103,7 @@ areaErrorNew = 0;
 
 
 for i = 1:results_leng
+    i
     [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
     f_answer, K2, N2, Ny, tE, T2, tau2, porosity); 
 
@@ -111,7 +113,7 @@ for i = 1:results_leng
     
     results_BFVold(i) = mask_Tc*f_est_old;
     results_BFVnew(i) = mask_Tc*f_est_new;  
-    
+    %{
     figure(50)
     clf
     hold on
@@ -137,12 +139,13 @@ for i = 1:results_leng
     ylabel('$f(T_2)$')
     title('Density Function of $T_2$');
     legend('True','Estimated ILT','Estimated ILT+', 'Logarithmic Mean', 'T_c')
+    %}
 end    
 
 %--------------- plotting old T2 est/ mean
 
 figure(5)
-
+clf
 subplot(2,1,1)
 min_val = min([results_T2meanold results_T2meannew]);
 max_val = max([results_T2meanold results_T2meannew]);
@@ -207,7 +210,7 @@ T2LM_ILTX_NRMSE = normalisedRootMeanSquareError(acquiredNewEst_mean,actualMean)
 % ------- BFV (bound fluid volume)
 
 figure(6)
-
+clf
 subplot(2,1,1)
 min_val = min([results_BFVold results_BFVnew]);
 max_val = max([results_BFVold results_BFVnew]);
@@ -313,7 +316,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
     m = K2*f_answer + noise;  
-    %
+    %{
         figure(2)
         clf
         plot(m);
@@ -321,7 +324,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
         title('Measured Signal')
         xlabel('Time 2  $ \tau_2 $ [s]')
         ylabel('$M(t)$')
-    %
+    %}
     
     
     % estimate tapered areas for different cut off times
@@ -556,13 +559,13 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     alpha = 1000;
         
     G = W*G;
-    
+    %{
     if(length(G) > 11)
         figure(34)
         clf
         plot(abs(G))   
     end
-    
+    %}
     L = W*L;    
     
     N = nnz(W);
@@ -597,10 +600,10 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
         %plot(c) 
     end
     hold off
-    
+    %{
     figure(77)
     plot(alpha_hist)
-    
+    %}
     f_est = L'*c;
     under = min(f_est);
     f_est = f_est - under;
