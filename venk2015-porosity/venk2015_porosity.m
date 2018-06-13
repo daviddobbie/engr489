@@ -24,7 +24,7 @@ set(0,'DefaultAxesTitleFontSizeMultiplier', 1)
 set(0,'defaultAxesFontSize',14)
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1.1)
 
-
+density_funcload = load('ExampleT2Plot.csv');
 %% Step 0: intialise variables
 
 % number of data points in each dimension
@@ -59,11 +59,18 @@ porosity = 20
 f_answer = porosity*f_answer./trapz(f_answer); % normalise to unity porosity
 
 
-f_calibrate = eye(Ny);
-%f_calibrate = f_calibrate./trapz(f_calibrate);
+f_answer = density_funcload;
+
+f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'spline')'
+
+porosity = trapz(f_answer);
 
 noise_mean = 0;
-n_std_dev = 0.2;
+n_std_dev = 0.2*porosity;
+
+f_calibrate = eye(Ny)*porosity;
+%f_calibrate = f_calibrate./trapz(f_calibrate);
+
 
 
 %% Step 1: ILT (use BRD)
@@ -157,32 +164,69 @@ ylabel('Sensitivity')
 legend('correction', 'simple correction')
 
 
-[f_est_ilt] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
-f_answer, K2, N2, Ny, tE, T2, tau2, porosity);
+N_p_est = 100;
+
+overall_corrected_p = zeros(1,N_p_est);
+overall_old_p = zeros(1,N_p_est);
+overall_answer_p = trapz(f_answer);
 
 
-old =  f_est_ilt;
-corrected_simple = correction_T2_simple' .* f_est_ilt;
-corrected = correction_T2' .* f_est_ilt;
-%corrected = corrected / trapz(corrected);
+for el = 1:N_p_est
+    
+    [f_est_ilt] = estimateDensityFunction(n_std_dev, noise_mean,  ... 
+    f_answer, K2, N2, Ny, tE, T2, tau2, porosity);
 
-figure(4)
+    old =  f_est_ilt;
+    corrected_simple = correction_T2_simple' .* f_est_ilt;
+    corrected = correction_T2' .* f_est_ilt;    
+
+    corrected_porosity = trapz(corrected);
+    old_porosity = trapz(old);
+
+    overall_corrected_p(el) = corrected_porosity;
+    overall_old_p(el) = old_porosity;
+ 
+    %corrected = corrected / trapz(corrected);
+    
+    figure(4)
+    clf
+    hold on
+    plot(T2, f_answer,'-b');
+    plot(T2, old,'-r');
+    %plot(T2, corrected_simple,'-k');
+    plot(T2, corrected,'-g');
+    hold off
+    set(gca, 'XScale', 'log')
+    xlabel('$T_2(s)$')
+    ylabel('$f(T_2)$')
+    %legend('True','ILT', 'Simple Correction', 'Correction')
+    legend('True','ILT', 'Correction')
+    
+
+
+end
+
+std_corrected = 100*std(overall_corrected_p)/ overall_answer_p;
+bias_corrected = 100*abs(1 - abs(overall_answer_p - mean(overall_corrected_p))/overall_answer_p);
+
+
+std_old = 100*std(overall_old_p)/ overall_answer_p;
+bias_old = 100*abs(abs(overall_answer_p - mean(overall_old_p))/overall_answer_p);
+
+
+figure(5)
 clf
 hold on
-plot(T2, f_answer,'-b');
-plot(T2, old,'-r');
-%plot(T2, corrected_simple,'-k');
-plot(T2, corrected,'-g');
+plot(bias_corrected, std_corrected,'.b', 'MarkerSize', 20)
+plot(bias_old, std_old, '.r', 'MarkerSize', 20)
 hold off
-set(gca, 'XScale', 'log')
-xlabel('$T_2(s)$')
-ylabel('$f(T_2)$')
-%legend('True','ILT', 'Simple Correction', 'Correction')
-legend('True','ILT', 'Correction')
+xlabel('Bias');
+ylabel('Imprecision');
+%xlim([0 100])
+%ylim([0 100])
 
-answer_porosity = trapz(f_answer)
-old_porosity = trapz(old)
-corrected_porosity = trapz(corrected)
+
+
 
 %% FUNCTION
 % Estimation of the density function from measured data. Returns 
