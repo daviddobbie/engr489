@@ -1,0 +1,4 @@
+Resukts are for M4 distribution in Venk 2015
+
+* As we increase the echo spacing interval, the distributions with more weight at lower rleaxation times becomes significantly less precise.
+* This tehcnique allows for working around the limits of echo spacing for the ILT algortihm. The small expense in precision helps to obtain the increased accuracy of it.
