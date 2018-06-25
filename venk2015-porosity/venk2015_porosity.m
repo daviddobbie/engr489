@@ -32,7 +32,7 @@ N2 = 1000;
 % number of bins in relaxation time grids
 Ny = 30;      
 %sets how many singular values we compress to
-sing_val=99; %no singular values
+sing_val=10; %no singular values
 tE = 200e-6; % sample interval
 T2 = logspace(-4,1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
@@ -42,6 +42,7 @@ K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
 % RECREATE MODEL 2 from Gruber et al pap 4
 
+%{
 %generate the density fn
 T2_mean1 = 0.05
 T2_var1 = 0.03
@@ -57,18 +58,18 @@ f_answer = f_answer + .75*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 
 porosity = 20
 f_answer = porosity*f_answer./trapz(f_answer); % normalise to unity porosity
-
+%}
 
 f_answer = density_funcload;
 
-f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'spline')'
+f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'pchip')'
 
 porosity = trapz(f_answer);
 
 noise_mean = 0;
-n_std_dev = 0.2*porosity;
+n_std_dev = 0.2;
 
-f_calibrate = eye(Ny)*porosity;
+f_calibrate = eye(Ny);
 %f_calibrate = f_calibrate./trapz(f_calibrate);
 
 
@@ -106,7 +107,7 @@ for idx = 1:results_leng
             ylabel('$f(T_2)$')
             title('Density Function of $T_2$');
             legend('True','Estimated ILT')
-            ylim([-2 2])
+            ylim([0 1])
             %pause(0.005)
         
     end
@@ -119,9 +120,9 @@ end
 
 %% Step 2: Calc porosity curve
 
-bias_T2 = (sum(bins_ILTold')/Ny);
+bias_T2 = (mean(bins_ILTold')) - 1;
 
-bias_T2 = bias_T2 ./bias_T2(8);
+%bias_T2 = bias_T2 ./bias_T2(8);
 
 
 bias_T2_augment = [bias_T2(1:7)  bias_T2(8)*ones(1,23)];
@@ -131,14 +132,15 @@ bias_T2_augment = [bias_T2(1:7)  bias_T2(8)*ones(1,23)];
 figure(1)
 clf
 hold on
-stem(T2, bias_T2)
-stem(T2, bias_T2_augment)
+plot(T2, bias_T2 + 1)
+plot(T2, bias_T2_augment + 1)
 set(gca, 'XScale', 'log')
 xlabel('$T_2(s)$')
 ylabel('Sensitivity')
+legend('Normal','Augmented')
 
 
-bias_T2 = bias_T2_augment;
+%bias_T2 = bias_T2_augment;
 
 
 
@@ -170,6 +172,8 @@ overall_corrected_p = zeros(1,N_p_est);
 overall_old_p = zeros(1,N_p_est);
 overall_answer_p = trapz(f_answer);
 
+
+n_std_dev = 0.2.*trapz(f_answer);
 
 for el = 1:N_p_est
     
@@ -222,8 +226,9 @@ plot(bias_old, std_old, '.r', 'MarkerSize', 20)
 hold off
 xlabel('Bias');
 ylabel('Imprecision');
-%xlim([0 100])
-%ylim([0 100])
+legend('corrected','old')
+xlim([0 100])
+ylim([0 100])
 
 
 
@@ -375,11 +380,16 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     f_est = c;
 
     %this is the method that prevents it being divergent
-    for i=1:50
+    for i=1:20
         
         %L_square = L*L'; 
-        stepFnMatrix = (heaviside(L'*c))'.* eye(Ny);
-        L_square = L *stepFnMatrix * L';       %recreate eq 30
+        %stepFnMatrix = (heaviside(L'*c))'.* eye(Ny);
+        %stepFnMatrix = heaviside(L'*L);
+        
+        %L_square = L *stepFnMatrix * L';       %recreate eq 30
+        L_square = L* L';
+        L_square = L_square .* heaviside(L_square);
+        all(eig(L_square) >= eps); %verify is positive semi-definite
         %made symmetric and semi-positive definite
         c = inv(L_square + alpha*eye(length(G))); %eq 29
         c = c*G;
@@ -387,7 +397,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
 
         alpha =10;
         %alpha =  n_std_dev * sqrt(N)/ norm(c);
-        alpha_hist = [alpha_hist alpha];
+        %alpha_hist = [alpha_hist alpha];
         %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
     end
@@ -397,8 +407,8 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     plot(alpha_hist)
     %}
     f_est = L'*c;
-    under = min(f_est);
-    f_est = f_est - under;
+    %under = min(f_est);
+    %f_est = f_est - under;
     %f_est = f_est ./ trapz(f_est); %normalise to unity
 
 
