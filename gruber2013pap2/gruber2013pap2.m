@@ -82,7 +82,7 @@ title('Correct Density Function of $T_2$');
 noise_mean = 0;
 n_std_dev = 0.1;
 
-Tc = 0.033;
+Tc = 33e-3;
 
 
 
@@ -102,7 +102,7 @@ actualBFV = mask_Tc*f_answer;
 
 %--------------- running simulations and results
 
-results_leng = 500;
+results_leng = 1000;
 results_T2meanold = zeros(1,results_leng);
 results_T2meannew = zeros(1,results_leng);
 
@@ -159,8 +159,13 @@ end
 figure(5)
 clf
 subplot(2,1,1)
-min_val = min([results_T2meanold results_T2meannew]);
-max_val = max([results_T2meanold results_T2meannew]);
+
+%min_val = min([results_T2meanold results_T2meannew]);
+%max_val = max([results_T2meanold results_T2meannew]);
+min_val = 6.5e-3;
+max_val = 10e-3;
+
+
 
 
 h1 = histogram(results_T2meanold, 30, 'BinLimits', [min_val max_val]);
@@ -226,7 +231,8 @@ clf
 subplot(2,1,1)
 min_val = min([results_BFVold results_BFVnew]);
 max_val = max([results_BFVold results_BFVnew]);
-
+%min_val = 0.23;
+%max_val = 0.3;
 
 h1 = histogram(results_BFVold, 30, 'BinLimits', [min_val max_val]);
 title('ILT')
@@ -582,8 +588,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     
     N = nnz(W);
     %N = length(W);
-    
-    
+
     Ny = size(L,2);
     c = ones([length(G)  1]);
 
@@ -610,8 +615,8 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
         
 
         
-        %alpha =  n_std_dev * sqrt(N)/ norm(c);
-        alpha =40;
+        alpha = n_std_dev * sqrt(N)/ norm(c);
+        alpha =25;
         alpha_hist = [alpha_hist alpha];
         %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 

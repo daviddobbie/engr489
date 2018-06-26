@@ -22,12 +22,12 @@ density_funcload = load('modelD.csv');
 
 %% init variables
 % number of data points in each dimension
-N2 = 5000;
+N2 = 1000;
 % number of bins in relaxation time grids
 Ny = 100;      
 %sets how many singular values we compress to
 sing_val=20; %no singular values
-tE = 500e-6; % sample interval
+tE = 200e-6; % sample interval
 T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
 %forms measurement arrays, time tau1 and tau2 domains
 tau2 = (1:N2)'*tE;  
@@ -37,10 +37,9 @@ tau2 = (1:N2)'*tE;
 f_answer = density_funcload
 f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'pchip')'
 f_answer = f_answer./trapz(f_answer); % normalise to unity porosity
-porosity =1;
 
 %f_answer = zeros(Ny, 1);
-%f_answer(75) = 1;
+%f_answer(50) = 1;
 
 %{
 %generate the density fn
@@ -60,8 +59,8 @@ f_answer = normpdf(T2, log10(T2_mean), sqrt(T2_var))';
 
 %}
 
-%porosity = trapz(f_answer);
-%f_answer = f_answer./porosity; % normalise to unity porosity
+porosity = trapz(f_answer);
+f_answer = f_answer./porosity; % normalise to unity porosity
 
 %porosity = trapz(f_answer)
 %delta distribut
@@ -76,7 +75,7 @@ xlabel('$T_2(s)$')
 ylabel('$f(T_2)$')
 title('Correct Density Function of $T_2$');
 
-n_stddev = 0.02
+n_stddev = 0.2
 
 
 % generate measured data from density function
@@ -92,7 +91,7 @@ figure(5)
 clf
 h1 = histogram(hist_data(:,1), 'BinWidth', 0.005);
 %xlim([0.150 0.350]);
-mean_actual = 10^((log10(T2))*f_answer)
+mean_actual = exp((log(T2))*f_answer)
 estmean_avg = mean(hist_data(:,1))
 estmean_stddev = 100*std(hist_data(:,2)) / estmean_avg
 %estmean_med = median(hist_data(:,1))
@@ -178,7 +177,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         %eq 23
         var = ((delta.^2)*(delta.^2)'/(gamma(omega+1)^2))*(sigma_n/poro)^2;
         %var = ((delta)*(delta)'/(gamma(omega+1)^2))*(sigma_n/poro)^2;
-        var= var + ((moment - k)^2)*(sigma_p/poro)^2;
+        var= var + (moment - k)^2*(sigma_p/poro)^2;
         return;
     elseif -1 < omega && omega < 0  %implement eq 22
         %{
@@ -205,7 +204,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
 %}
         %estimate 1st derivate of M at 0 with polyfit
         coeffc = polyfit(1:100, m(1:100)', 1);
-        a1 = (coeffc(1))/(tE)
+        a1 = (coeffc(1))/(tE);
         m_est = coeffc(1).*(1:100) + coeffc(2);
         a1_stddev = std(abs(m(1:100) - m_est')); %standard deviation of slope
         
@@ -319,12 +318,12 @@ ylabel("$\Delta_i$ values")
 for inx = 1:length(omega_axis)
     omg = omega_axis(inx);
     % certain about porosity
-    [mom var] = mellinTransform(M_comp, omg, tE , porosity_answer, 0.2 ,n_stddev);
+    [mom var] = mellinTransform(M_comp, omg, tE , porosity_answer, 0.01 ,n_stddev);
     J(indx_covar_mat) = 1/mom;
     
     Sigma_G(indx_covar_mat,indx_covar_mat) = var;
     
-    result_axis(indx_covar_mat,:) = [log10(mom)  var];
+    result_axis(indx_covar_mat,:) = [log(mom)  var];
     
     indx_covar_mat = indx_covar_mat +1; 
     
@@ -380,7 +379,7 @@ coeffc = polyfit3(n2_omega_axis, n2_r_a , 2 , [], 1./n2_var_r_a);
 var_lnT2 = abs(coeffc(1));
 moment_lnT2 = coeffc(2);
 
-momentT2 = 10^(moment_lnT2);
+momentT2 = moment_lnT2));
 varT2 =  (var_lnT2);
 return;
 end
