@@ -29,7 +29,7 @@ density_funcload = load('datasets\model2.csv');
 
 %% init variables
 % number of data points in each dimension
-N2 = 1000;
+N2 = 3000;
 % number of bins in relaxation time grids
 Ny = 50;      
 %sets how many singular values we compress to
@@ -102,7 +102,7 @@ actualBFV = mask_Tc*f_answer;
 
 %--------------- running simulations and results
 
-results_leng = 1000;
+results_leng = 100;
 results_T2meanold = zeros(1,results_leng);
 results_T2meannew = zeros(1,results_leng);
 
@@ -151,7 +151,7 @@ for i = 1:results_leng
     ylabel('$f(T_2)$')
     title('Density Function of $T_2$');
     legend('True','Estimated ILT','Estimated ILT+', 'Logarithmic Mean', 'T_c')
-    ylim([0 0.15])
+    ylim([0 0.5])
 end    
 
 %--------------- plotting old T2 est/ mean
@@ -160,10 +160,10 @@ figure(5)
 clf
 subplot(2,1,1)
 
-%min_val = min([results_T2meanold results_T2meannew]);
-%max_val = max([results_T2meanold results_T2meannew]);
-min_val = 6.5e-3;
-max_val = 10e-3;
+min_val = min([results_T2meanold results_T2meannew]);
+max_val = max([results_T2meanold results_T2meannew]);
+%min_val = 6.5e-3;
+%max_val = 10e-3;
 
 
 
@@ -329,7 +329,7 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
     noise_mean, f_answer, K2, N2, Ny, tE, T2, tau2, porosity)
 
 
-    omega = linspace(-0.5,1,12);
+    omega = linspace(-0.2,1,12);
     T_cutoff = [0.01 0.1 1];
 
     noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
@@ -393,8 +393,8 @@ function [f_est_old f_est_new] = estimateDensityFunction(n_std_dev, ...
 
     G_opt = [m_comp; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [1*(ones(size(m_comp)))/n_std_dev; 1./momentVect(:,2) ; ...
-        1./tpdAreasVect(:,2)];
+    W_vect = [1*(ones(size(m_comp)))/n_std_dev; 0./momentVect(:,2) ; ...
+        0./tpdAreasVect(:,2)]
     W_opt = W_vect .* eye(size(G_opt,1));    
     
     % normalise to unity, make it comparable to unweighted method
@@ -616,7 +616,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
 
         
         alpha = n_std_dev * sqrt(N)/ norm(c);
-        alpha =25;
+        %alpha =14;
         alpha_hist = [alpha_hist alpha];
         %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
@@ -648,9 +648,11 @@ end
 %    variance of T2 moment
 
 function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
-       N = length(m);
+        N = length(m);
        moment = 0;
        var = 0;
+        
+        
     if omega==0
         moment = 1;
         var = 0;
@@ -666,17 +668,48 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
         delta = [delta_1 delta_mid delta_N];
         
+%         hold on
+%         plot (delta)
+%         hold off
+        
+        %delta = [(0.5*tau_min(2.^omega-1.^omega)) delta (0.5*tau_min*(N.^omega-(N-1).^omega))];
+        
+        %omega
+        
         % note that erroneous values are apparent for a negative
         % measurement (leads to complex result from log)
         moment = k + 1/(gamma(omega + 1)*poro) * (delta*m); % eq18
-              
+        %{
+        if moment < 1e-1
+           disp('OMEGA CAUSED ERROR'); 
+           omega
+        end
+        %}
+
+        
+        if moment < 1e-1 || abs(moment) == Inf % computation breaks, is negative
+            k;
+            %disp('delta * m');
+            (delta*m);
+            %disp('1/gamma(omg + 1)');
+            1/(gamma(omega + 1)*poro);
+            moment = 1;
+        end
+           
         
         %eq 23
-        var = (sum(delta.^2)/gamma(omega+1)^2)*(sigma_n/poro)^2;
-        var= var + (moment - k)^2*(sigma_p/poro)^2;
+        var = ((delta.^2)*(delta.^2)'/(gamma(omega+1)^2))*(sigma_n/poro)^2;
+        %var = ((delta)*(delta)'/(gamma(omega+1)^2))*(sigma_n/poro)^2;
+        var= var + ((moment - k)^2)*(sigma_p/poro)^2;
         return;
     elseif -1 < omega && omega < 0  %implement eq 22
-        
+        %{
+        for indx = 2:3;
+            if m(indx) > 1;
+               m(indx) = 1;
+            end
+        end
+        %}
         tau_min = tE^omega; %eq 19a
         k = tau_min / gamma(omega+1); %eq 19a
         
@@ -685,36 +718,42 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         % eq 19c-e
         delta_1 = (0.5 * tau_min * (2^omega - 1^omega) );
         delta_mid = 0.5 * tau_min * ((n+1).^omega - (n-1).^omega);
-        delta_N = (0.5 * tau_min * (N^omega - (N-1)^omega) );
+        delta_N = (0.5 * tau_min * (N.^omega - (N-1).^omega) );
         delta = [delta_1 delta_mid delta_N];
-          
+          %{
+                 hold on
+         plot (delta)
+         hold off
+%}
         %estimate 1st derivate of M at 0 with polyfit
         coeffc = polyfit(1:100, m(1:100)', 1);
         a1 = (coeffc(1))/(tE);
         m_est = coeffc(1).*(1:100) + coeffc(2);
         a1_stddev = std(abs(m(1:100) - m_est')); %standard deviation of slope
         
+        %a1 = -1;
+        
         const = ((a1*omega) / (omega+1)) * tau_min^((omega+1)/omega);
         
+        moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);
         
-        
-        
-        
-        moment = k + (1/(gamma(omega + 1)*poro)) * (const + delta*m);       
-        
-        
-       if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
+        %{
+        if moment < 1e-1
+           disp('OMEGA CAUSED ERROR'); 
+           moment
+        const + delta*m
+        const
+        delta*m
+        omega
+        end
+        %}
+        if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
-            %disp('delta * m')
-            (delta*m);
-            %disp('1/gamma(omg + 1)')
-            1/(gamma(omega + 1)*poro);
-            moment = NaN;
+            moment = 1;
         end
         
         
-        
-        var = (sum(delta.^2))   /  (gamma(omega+1))^2*(sigma_n/poro)^2 + var;
+        var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2 + var;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         var = var + ((omega*tau_min^((omega+1)/omega))/gamma(omega + 2)) * (a1_stddev / poro)^2;
         return;
@@ -723,5 +762,4 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         var = 0;
     end
 end
-
 
