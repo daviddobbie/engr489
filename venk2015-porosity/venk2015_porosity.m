@@ -27,8 +27,10 @@ set(0,'DefaultAxesTitleFontSizeMultiplier', 1.1)
 
 %loading M4 dist from paper 2015 porosity estimation
 density_funcload = load('datasets\m4.csv');
-density_funcload(:,2) = density_funcload(:,2) - min(density_funcload(:,2))
-
+%density_funcload(:,2) = density_funcload(:,2)
+[C,ia,ic]  = unique(density_funcload(:,1)),'stable';
+density_funcload = density_funcload(ia,:);
+%density_funcload = density_funcload(:~non_unique,:);
 %{
 figure(3)
 clf
@@ -43,7 +45,7 @@ N2 = 1000;
 Ny = 30;      
 %sets how many singular values we compress to
 sing_val=5; %no singular values
-tE = 200e-6;
+tE = 100e-6;
 %tE = 200e-6; % sample interval
 T2 = logspace(log10(300e-6),log10(3),Ny); %form T2 domain, use log since will be small
 %T2 = logspace(-5,1,Ny);
@@ -97,7 +99,7 @@ f_calibrate = eye(Ny);
 
 
 %% Step 1: ILT (use BRD)
-results_leng = 50;
+results_leng = 10;
 bins_ILTold = zeros(Ny,results_leng*Ny);
 
 
@@ -191,7 +193,7 @@ ylabel('Sensitivity')
 legend('correction', 'simple correction')
 
 
-N_p_est = 1000;
+N_p_est = 500;
 
 overall_corrected_p = zeros(1,N_p_est);
 overall_old_p = zeros(1,N_p_est);
