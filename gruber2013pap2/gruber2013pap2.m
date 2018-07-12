@@ -56,8 +56,8 @@ f_answer = .25*normpdf(log10(T2), log10(T2_mean1), sqrt(T2_var1))';
 f_answer = f_answer + .75*normpdf(log10(T2), log10(T2_mean2), sqrt(T2_var2))';
 %}
 
-f_answer = density_funcload
-f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'pchip')'
+f_answer = density_funcload;
+f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'pchip')';
 
 
 f_answer = f_answer./trapz(f_answer); % normalise to unity porosity
@@ -98,7 +98,7 @@ end
 actualMean = exp((log(T2))*f_answer);
 
 %calc BFV
-actualBFV = mask_Tc*f_answer;
+actualBFV = mask_Tc*f_answer
 
 %--------------- running simulations and results
 

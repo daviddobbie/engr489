@@ -45,7 +45,7 @@ N2 = 1000;
 Ny = 30;      
 %sets how many singular values we compress to
 sing_val=5; %no singular values
-tE = 100e-6;
+tE = 10e-6;
 %tE = 200e-6; % sample interval
 T2 = logspace(log10(300e-6),log10(3),Ny); %form T2 domain, use log since will be small
 %T2 = logspace(-5,1,Ny);
