@@ -13,7 +13,6 @@
 
 
 clc
-clf
 clear
 
 set(0,'defaultTextInterpreter','latex');
@@ -42,7 +41,7 @@ N2 = 1000;
 Ny = 30;      
 %sets how many singular values we compress to
 sing_val=5; %no singular values
-tE = 500e-6;
+tE = 300e-6;
 %tE = 200e-6; % sample interval
 T2 = logspace(-3,0.3,Ny); %form T2 domain, use log since will be small
 %T2 = logspace(-5,1,Ny);
@@ -51,11 +50,11 @@ tau2 = (1:N2)'*tE;
 
 K2 = exp(-tau2 * (1./T2) );     % simple T2 relaxation kernel
 
-%{
+
 f_answer = density_funcload;
 f_answer = interp1(density_funcload(:,1),density_funcload(:,2),T2,'pchip')';
 porosity = trapz(f_answer);
-%}
+
 
 f_answer = zeros(Ny,1)
 for idx = 1:Ny
@@ -64,6 +63,7 @@ for idx = 1:Ny
     end
 end
 f_answer = 1*f_answer./sum(f_answer);
+
 
 figure(3)
 clf
@@ -78,7 +78,7 @@ n_std_dev = 0.02;
 
 %% make integral transforms
 
-Tc = 33e-3;
+Tc = 90e-3;
 
 % make integral transform for density
 porosity_density_g_vector = ones(Ny, 1);
@@ -91,16 +91,134 @@ for idx = 1:Ny
     end
 end
 
+transform1 = porosity_density_g_vector;
+transform2 = bfv_density_g_vector;
+transform3 = 1 - bfv_density_g_vector;
+
+transform4 = ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
+
+transform5 = 1 - transform4;
+
+
+figure(1)
+clf
+hold on
+plot(T2, transform1);
+plot(T2, transform2);
+plot(T2, transform3);
+plot(T2, transform4);
+plot(T2, transform5);
+set(gca, 'XScale', 'log')
+legend('g0', 'g1', 'g2','g3','g4')
+hold off
+grid on
+
+
+
+
+[alph transformResults1, transformPredict1, rmseTransform1] ...
+    = bayesianEstimateIntegralTransform(transform1, f_answer, n_std_dev, noise_mean, T2, K2, tau2);
+
+[alph transformResults2, transformPredict2, rmseTransform2] ...
+    = bayesianEstimateIntegralTransform(transform2, f_answer, n_std_dev, noise_mean, T2, K2, tau2);
+
+[alph transformResults3, transformPredict3, rmseTransform3] ...
+    = bayesianEstimateIntegralTransform(transform3, f_answer, n_std_dev, noise_mean, T2, K2, tau2);
+
+[alph transformResults4, transformPredict4, rmseTransform4] ...
+    = bayesianEstimateIntegralTransform(transform4, f_answer, n_std_dev, noise_mean, T2, K2, tau2);
+
+[alph transformResults5, transformPredict5, rmseTransform5] ...
+    = bayesianEstimateIntegralTransform(transform5, f_answer, n_std_dev, noise_mean, T2, K2, tau2);
+
+
+
+figure(2)
+clf
+hold on
+plot(alph,transformResults1(:,1));
+plot(alph,transformResults2(:,1));
+plot(alph,transformResults3(:,1));
+plot(alph,transformResults4(:,1));
+plot(alph,transformResults5(:,1));
+hold off
+set(gca, 'XScale', 'log')
+xlabel('$\alpha$')
+ylabel('$\langle I \rangle$')
+ylim([0 1.2])
+grid on
+legend('g0', 'g1', 'g2','g3','g4')
+
+% plot variance of the estimator
+figure(4)
+clf
+subplot(1,2,1)
+hold on
+plot(alph, transformPredict1)
+plot(alph, transformPredict2)
+plot(alph, transformPredict3)
+plot(alph, transformPredict4)
+plot(alph, transformPredict5)
+hold off
+set(gca, 'XScale', 'log')
+set(gca, 'YScale', 'log')
+xlabel('$\alpha$')
+ylabel('$\hat{\sigma_I}$ Computed')
+grid on
+ylim([10e-6 10e0])
+
+subplot(1,2,2)
+hold on
+plot(alph, transformResults1(:,2))
+plot(alph, transformResults2(:,2))
+plot(alph, transformResults3(:,2))
+plot(alph, transformResults4(:,2))
+plot(alph, transformResults5(:,2))
+hold off
+set(gca, 'XScale', 'log')
+set(gca, 'YScale', 'log')
+xlabel('$\alpha$')
+ylabel('$\sigma_I$ Empirical' )
+grid on
+ylim([10e-6 10e0])
+
+
+figure(5)
+clf
+hold on
+plot(alph, rmseTransform1)
+plot(alph, rmseTransform2)
+plot(alph, rmseTransform3)
+plot(alph, rmseTransform4)
+plot(alph, rmseTransform5)
+hold off
+set(gca, 'XScale', 'log')
+set(gca, 'YScale', 'log')
+xlabel('$\alpha$')
+ylabel('RMSE I Bayesian' )
+grid on
+ylim([10e-4 10e0])
+
+
+
+
+
+
+
+
+
+
+%{
 % test intergation over whole timeline window
 % test different regularisation coefficients, alpha.
-alpha_length = 50;
+alpha_length = 20;
 alpha_axis = logspace(-5,5,alpha_length);
-num_attempts = 50;
+num_attempts = 20;
 
-porosity_results = zeros(alpha_length,num_attempts);
-porosity_computed_uncertainty = zeros(alpha_length,1);
+intTransform_results = zeros(alpha_length,num_attempts);
+intTransform_computed_uncertainty = zeros(alpha_length,1);
 
-porosity_givenalpha = zeros(alpha_length,2) %[mean, uncertainty]
+intTransform_givenalpha = zeros(alpha_length,2) %[mean, uncertainty]
 
 for alph_idx = 1:alpha_length
     alpha = alpha_axis(alph_idx);
@@ -116,7 +234,7 @@ for alph_idx = 1:alpha_length
         %mu_f = mean((T2'.*f_answer)');
         mu_f =exp((log(T2))*f_answer);
         
-        % create reference delta density at certain frequuency point
+        % create reference delta density at certain frequency point
         [diff, idx] = min(abs(T2-mu_f));
         mu_f_distrib = zeros(Ny,1); mu_f_distrib(idx,1) = 1;
 
@@ -127,8 +245,8 @@ for alph_idx = 1:alpha_length
         plot(tau2,K2*mu_f_distrib)        
         ylim([-0.5 1.5])
 
-        [poro_mean poro_uncertainty] = calcNormIntegralTransformGivenMeasured(porosity_density_g_vector, m,K2, Cf, Cn, mu_f, T2);
-        actual_porosity = (porosity_density_g_vector'*f_answer);
+        [intTrans_mean, intTrans_uncertainty] = calcNormIntegralTransformGivenMeasured(porosity_density_g_vector, m,K2, Cf, Cn, mu_f, T2);
+        actual_intTransform = (porosity_density_g_vector'*f_answer);
         
         figure(44)
         hold on
@@ -136,21 +254,21 @@ for alph_idx = 1:alpha_length
         set(gca, 'XScale', 'log')        
         
         
-        porosity_results(alph_idx,idx_attempt) = poro_mean;
-        porosity_computed_uncertainty(alph_idx) = poro_uncertainty;
+        intTransform_results(alph_idx,idx_attempt) = intTrans_mean;
+        intTransform_computed_uncertainty(alph_idx) = intTrans_uncertainty;
     end
     
 end
 
-porosity_givenalpha(:,1) = mean(porosity_results')';
-porosity_givenalpha(:,2) = std(porosity_results')';
+intTransform_givenalpha(:,1) = mean(intTransform_results')';
+intTransform_givenalpha(:,2) = std(intTransform_results')';
 
 figure(2)
 clf
-plot(alpha_axis,porosity_givenalpha(:,1));
+plot(alpha_axis,intTransform_givenalpha(:,1));
 set(gca, 'XScale', 'log')
 xlabel('$\alpha$')
-ylabel('$\langle \phi \rangle$')
+ylabel('$\langle I \rangle$')
 ylim([0 1.2])
 grid on
 
@@ -158,26 +276,26 @@ grid on
 figure(4)
 clf
 subplot(1,2,1)
-plot(alpha_axis, porosity_computed_uncertainty)
+plot(alpha_axis, intTransform_computed_uncertainty)
 set(gca, 'XScale', 'log')
 set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
-ylabel('$\hat{\sigma_\phi}$ Computed')
+ylabel('$\hat{\sigma_I}$ Computed')
 grid on
 ylim([10e-6 10e0])
 
 subplot(1,2,2)
-plot(alpha_axis, porosity_givenalpha(:,2))
+plot(alpha_axis, intTransform_givenalpha(:,2))
 set(gca, 'XScale', 'log')
 set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
-ylabel('$\sigma_\phi$ Empirical' )
+ylabel('$\sigma_I$ Empirical' )
 grid on
 ylim([10e-6 10e0])
 
 % plot rmse of the porosity estimator
 
-rmse_bayesian = sqrt(mean(((porosity_results - actual_porosity).^2)'));
+rmse_bayesian = sqrt(mean(((intTransform_results - actual_intTransform).^2)'));
 
 
 figure(5)
@@ -187,9 +305,10 @@ plot(alpha_axis, rmse_bayesian)
 set(gca, 'XScale', 'log')
 set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
-ylabel('RMSE Porosity Bayesian' )
+ylabel('RMSE I Bayesian' )
 grid on
 ylim([10e-4 10e0])
+%}
 
 
 %{
@@ -197,7 +316,7 @@ ylim([10e-4 10e0])
 actual_bfv = (bfv_density_g_vector'*f_answer)
 
 est_bff = bfv_mean ./ poro_mean
-actual_bff = (bfv_density_g_vector'*f_answer) / (porosity_density_g_vector'*f_answer)
+actual_bff = (bfv_density_g_vector'*f_answer) / (intTransform_density_g_vector'*f_answer)
 %}
 
 %% functions
@@ -223,20 +342,136 @@ function [mean std_dev] = calcNormIntegralTransformGivenMeasured(g, m, K, Cf, Cn
     %}
     mu_f_distrib = zeros(length(T2),1); %a zero prior
     
+    %{
     figure(44)
     clf
-    %plot(T2, R * (m - K*mu_f_distrib)+ mu_f_distrib)
     plot(T2, R * (m - K*mu_f_distrib) - mu_f_distrib)
     set(gca, 'XScale', 'log')
     ylim([0 0.1])
     grid on
-    %ylim([-2 2])
-    
+    %}
     
     %mean = g' * (  R * (m - K*mu_f_distrib) + mu_f_distrib);
     mean = g' * (  R * (m - K*mu_f_distrib) - mu_f_distrib);
     std_dev = sqrt(g'  *   (Cf - R*K*Cf')  *  g);
     %std_dev = g'  *   inv(   inv(Cf) + K' *inv(Cn) * K  )  *  g;
+end
+
+% Performs the prediction of the resulting integral transform with multiple
+% initialiasations of the noise. This is used the assess the performance of
+% the algorithm
+% INPUTS: 
+%    g: 
+% OUTPUTS:
+function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty, rmse_bayesian]  = ...
+    bayesianEstimateIntegralTransform(g_intTransform,  f_answer, n_std_dev, noise_mean, T2, K2, tau2)
+    % test intergation over whole timeline window
+    % test different regularisation coefficients, alpha.
+    N2 = length(tau2);
+    Ny = length(T2);
+    
+    alpha_length = 30;
+    alpha_axis = logspace(-5,5,alpha_length);
+    num_attempts = 200;
+
+    intTransform_results = zeros(alpha_length,num_attempts);
+    intTransform_computed_uncertainty = zeros(alpha_length,1);
+
+    intTransform_givenalpha = zeros(alpha_length,2) %[mean, uncertainty]
+
+    for alph_idx = 1:alpha_length
+        alpha = alpha_axis(alph_idx);
+        alph_idx
+        for idx_attempt = 1:num_attempts
+            % init measured data
+            noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
+            m = K2*f_answer + noise;  
+
+            Cf = (n_std_dev)^2*eye(Ny)./(alpha);
+            Cn = (n_std_dev)^2*eye(N2);
+
+            %mu_f = mean((T2'.*f_answer)');
+            mu_f =exp((log(T2))*f_answer);
+
+            % create reference delta density at certain frequency point
+            [diff, idx] = min(abs(T2-mu_f));
+            mu_f_distrib = zeros(Ny,1); mu_f_distrib(idx,1) = 1;
+            
+            %{
+            figure(99)
+            clf
+            hold on
+            plot(tau2,m)
+            plot(tau2,K2*mu_f_distrib)        
+            ylim([-0.5 1.5])
+            %}
+            
+            [intTrans_mean, intTrans_uncertainty] = calcNormIntegralTransformGivenMeasured(g_intTransform, m,K2, Cf, Cn, mu_f, T2);
+            actual_intTransform = (g_intTransform'*f_answer);
+            
+            %{
+            figure(44)
+            hold on
+            plot(T2, f_answer, '-r')
+            set(gca, 'XScale', 'log')        
+            %}
+
+            intTransform_results(alph_idx,idx_attempt) = intTrans_mean;
+            intTransform_computed_uncertainty(alph_idx) = intTrans_uncertainty;
+        end
+
+    end
+
+    intTransform_givenalpha(:,1) = mean(intTransform_results')';
+    intTransform_givenalpha(:,2) = std(intTransform_results')';
+
+    % plot rmse of the porosity estimator
+    rmse_bayesian = sqrt(mean(((intTransform_results - actual_intTransform).^2)'));    
+    
+ 
+%{
+    figure(2)
+    clf
+    plot(alpha_axis,intTransform_givenalpha(:,1));
+    set(gca, 'XScale', 'log')
+    xlabel('$\alpha$')
+    ylabel('$\langle I \rangle$')
+    ylim([0 1.2])
+    grid on
+
+    % plot variance of the estimator
+    figure(4)
+    clf
+    subplot(1,2,1)
+    plot(alpha_axis, intTransform_computed_uncertainty)
+    set(gca, 'XScale', 'log')
+    set(gca, 'YScale', 'log')
+    xlabel('$\alpha$')
+    ylabel('$\hat{\sigma_I}$ Computed')
+    grid on
+    ylim([10e-6 10e0])
+
+    subplot(1,2,2)
+    plot(alpha_axis, intTransform_givenalpha(:,2))
+    set(gca, 'XScale', 'log')
+    set(gca, 'YScale', 'log')
+    xlabel('$\alpha$')
+    ylabel('$\sigma_I$ Empirical' )
+    grid on
+    ylim([10e-6 10e0])
+
+
+    figure(5)
+    clf
+
+    plot(alpha_axis, rmse_bayesian)
+    set(gca, 'XScale', 'log')
+    set(gca, 'YScale', 'log')
+    xlabel('$\alpha$')
+    ylabel('RMSE I Bayesian' )
+    grid on
+    ylim([10e-4 10e0])
+    %}
 end
 
 
