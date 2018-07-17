@@ -93,9 +93,9 @@ end
 
 % test intergation over whole timeline window
 % test different regularisation coefficients, alpha.
-alpha_length = 50;
+alpha_length = 100;
 alpha_axis = logspace(-5,5,alpha_length);
-num_attempts = 50;
+num_attempts = 100;
 
 porosity_results = zeros(alpha_length,num_attempts);
 porosity_computed_uncertainty = zeros(alpha_length,1);
@@ -177,19 +177,26 @@ ylim([10e-6 10e0])
 
 % plot rmse of the porosity estimator
 
-rmse_bayesian = sqrt(mean(((porosity_results - actual_porosity).^2)'));
-
-
 figure(5)
 clf
 
-plot(alpha_axis, rmse_bayesian)
+subplot(1,2,1)
+plot(alpha_axis, RMSE Computed)
 set(gca, 'XScale', 'log')
 set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
-ylabel('RMSE Porosity Bayesian' )
+ylabel('$\hat{\sigma_\phi}$ Computed')
 grid on
-ylim([10e-4 10e0])
+ylim([10e-6 10e0])
+
+subplot(1,2,2)
+plot(alpha_axis, RMSE Em)
+set(gca, 'XScale', 'log')
+set(gca, 'YScale', 'log')
+xlabel('$\alpha$')
+ylabel('$\sigma_\phi$ Empirical' )
+grid on
+ylim([10e-6 10e0])
 
 
 %{
