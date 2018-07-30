@@ -9,7 +9,11 @@
 %relaxomtery measurements, checking different priors
 
 % algorithm goes as follows:
-% 
+%   load up f mean prior from high quality data
+%   transpose K matrix with weighting fo different variances of f
+%   iterate through these different variances to find where RMSE is
+%       minmised
+%   plot variance, bias, standard deviation
 
 
 clc
@@ -79,7 +83,8 @@ for idx = 1:Ny
         f_answer(idx) = 1;
     end
 end
-f_answer = 500*f_answer./sum(f_answer);
+f_answer = ones(Ny,1);
+f_answer = 1*f_answer./sum(f_answer);
 
 
 figure(3)
@@ -132,11 +137,17 @@ f_mean_prior =mean(experimentalfT2')'; %mean of all previous experimental data
 
 
 f_mean_prior_interpolated = interp1(experimentalT2Axis, f_mean_prior, T2, 'spline')';
+f_mean_prior_interpolated = f_mean_prior_interpolated ./trapz(f_mean_prior_interpolated);
+
+%f_answer = f_mean_prior_interpolated;
+
+%f_mean_prior_interpolated = f_answer;
+%f_mean_prior_interpolated = zeros(Ny,1);
 
 figure(8)
 clf
 hold on
-plot(experimentalT2Axis, f_mean_prior);
+%plot(experimentalT2Axis, f_mean_prior);
 plot(T2, f_mean_prior_interpolated);
 set(gca, 'XScale', 'log') 
 hold off
@@ -176,7 +187,7 @@ hold off
 set(gca, 'XScale', 'log')
 xlabel('$\alpha$')
 ylabel('$\langle I \rangle$')
-ylim([0 1.2])
+%ylim([0 10])
 grid on
 legend('g0', 'g1', 'g2','g3','g4')
 
@@ -196,7 +207,7 @@ set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
 ylabel('$\hat{\sigma_I}$ Computed')
 grid on
-ylim([10e-6 10e0])
+ylim([10e-6 10e1])
 
 subplot(1,2,2)
 hold on
@@ -211,7 +222,7 @@ set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
 ylabel('$\sigma_I$ Empirical' )
 grid on
-ylim([10e-6 10e0])
+ylim([10e-6 10e1])
 
 
 figure(5)
@@ -228,7 +239,7 @@ set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
 ylabel('RMSE I Bayesian' )
 grid on
-ylim([10e-4 10e0])
+ylim([10e-4 10e1])
 
 
 %% functions
@@ -264,7 +275,7 @@ function [mean std_dev] = calcNormIntegralTransformGivenMeasured(g, m, K, Cf, Cn
     %}
     
     %mean = g' * (  R * (m - K*mu_f_distrib) + mu_f_distrib);
-    mean = g' * (  R * (m - K*mu_f_distrib) - mu_f_distrib);
+    mean = g' * (  R * (m - K*mu_f_distrib) + mu_f_distrib);
     std_dev = sqrt(g'  *   (Cf - R*K*Cf')  *  g);
     %std_dev = g'  *   inv(   inv(Cf) + K' *inv(Cn) * K  )  *  g;
 end
@@ -282,7 +293,7 @@ function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty
     N2 = length(tau2);
     Ny = length(T2);
     
-    alpha_length = 20;
+    alpha_length = 50;
     alpha_axis = logspace(-5,5,alpha_length);
     num_attempts = 20;
 
