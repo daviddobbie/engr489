@@ -1,0 +1,9 @@
+Test for 100 different alpha values logarithmically spaced from 10^-5 to 10^5
+
+Each alpha point is calculated 50 times to obtain the variance and RMSE
+
+Each sweep through alpha is done for leave one out cross validation with the dataset of experimentally obtained values.
+
+The resultant plots are the averages of the values for all of our different experiments for cross validation.
+
+Perhaps should add error bars to the mean experiments so that we can have certainty when finding our alpha value based on the intrinsic data we are testing.
