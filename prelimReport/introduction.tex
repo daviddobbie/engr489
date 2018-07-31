@@ -1,0 +1,21 @@
+\chapter{Introduction}\label{C:intro}
+Relaxation times gathered from nuclear magnetic resonance (NMR) experiments provide insight into the physical nature of a sample \cite{GruberLinearFunctionals2013}. However, most NMR experiments are restricted to a limited environment - like a laboratory \cite{IntrinsicSNREdelstein1986}. To be practicable in use cases that have constraints such as high noise or low signal power, more advanced signal processing is required. This preliminary report details the progress made in developing a new technique of extending the use to NMR to nosier environments. The focus is on a specific attribute: the bound fluid fraction of porous media.
+\section{Motivation}
+The motivation of this project is to improve upon traditional techniques of gathering relaxation times from measured data gathered in low signal-to-noise ratio (SNR) environments. Development of this technology has originally been focused on the goal of testing the viability of oil wells \cite{wellLoggingBook}. The specific goal was to estimate how easy it was to extract fluid out of the rock at an extraction point. Often this is a very high noise environment that is poorly controlled, necessitating the use of robust estimation techniques \cite{BadTruthLaplaceEpstein2008} \cite{NumericalInversionLaplaceTransform1978}. An improvement in NMR processing can be translated to other use cases where the power is limited. These can include identifying the nature of fluids in food products \cite{NMRFOODCapitani2017}.
+\section{Aim}
+The aims of this project are to:
+\begin{enumerate}
+    \item Implement and evaluate the competing techniques for finding distributions of T2 relaxation times.
+    \item Implement and evaluate new techniques using Bayesian statistics to establish the distribution of T2 relaxation times.
+    \item Use these techniques to improve upon the estimation of the bound fluid fraction of a sample.
+\end{enumerate}
+
+
+\section{Proposal Review}
+Compared to the initial proposal, the project is closely aligned with the goals and scope outlined in it. As the project up to this point has been focused on implementing the competing algorithms there has been minimal scope drift. The problem being solved is well understood in the literature and has a goal that can be numerically validated. 
+
+
+The main change from the proposal was to add more focus onto bound fluid fraction ($BFF$) detected in a sample. This is a numerical value that allows for a non-trivial insight into the sample being measured. The density function of T2 relaxation times is an important intermediate step to the $BFF$. However, the density function provides more information than is needed in many physical use cases. The addition of this aim to the project more closely meets its scope to tangible and directly application.
+
+ 
+
