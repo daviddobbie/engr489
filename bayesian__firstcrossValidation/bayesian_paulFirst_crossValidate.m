@@ -154,7 +154,7 @@ hold off
 %}
 
 [tot_Prior  del] = size(experimentalfT2')
-alph_length = 100;
+alph_length = 2;
 
 transformResults1 = zeros(alph_length,2);
 transformPredict1 = zeros(alph_length,1);
@@ -179,9 +179,13 @@ for indx = 1:tot_Prior
     n_std_dev = 0.02 .* trapz(answer_oneOut) %normalise for unknown distribution, SNR is known
 
     % the prior of other results that is being used
+    f_uncertain_prior = std(prior')';
+    f_uncertain_prior_interpol = interp1(experimentalT2Axis, f_uncertain_prior, T2, 'pchip',0)';
+    %f_uncertain_prior_interpol = ones(Ny,1);
+    
     f_mean_prior =mean(prior')'; %mean of all previous experimental data
-    f_mean_prior_interpolated = interp1(experimentalT2Axis, f_mean_prior, T2, 'spline')';
-    f_answer = interp1(experimentalT2Axis, answer_oneOut, T2, 'spline')';
+    f_mean_prior_interpolated = interp1(experimentalT2Axis, f_mean_prior, T2, 'pchip',0)';
+    f_answer = interp1(experimentalT2Axis, answer_oneOut, T2, 'pchip',0)';
     
     % plot each one-out versus prior
     figure(8)
@@ -189,7 +193,8 @@ for indx = 1:tot_Prior
     hold on
     %plot(experimentalT2Axis, f_mean_prior);
     plot(T2, f_answer);
-    plot(T2, f_mean_prior_interpolated);
+    errorbar(T2, f_mean_prior_interpolated, f_uncertain_prior_interpol);
+    
     set(gca, 'XScale', 'log') 
     hold off
        
@@ -377,7 +382,7 @@ function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty
     
     alpha_length = alph_length;
     alpha_axis = logspace(-5,5,alpha_length);
-    num_attempts = 50;
+    num_attempts = 10;
 
     intTransform_results = zeros(alpha_length,num_attempts);
     intTransform_computed_uncertainty = zeros(alpha_length,1);

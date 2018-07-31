@@ -13,7 +13,7 @@
 % algorithm goes as follows:
 %   load up f mean prior from high quality data
 %   transpose K matrix with weighting fo different variances of f
-%   iterate through these different variances to find where nrmse is
+%   iterate through these different variances to find where rmse is
 %       minmised
 %   plot variance, bias, standard deviation
 
@@ -154,17 +154,17 @@ hold off
 %}
 
 [tot_Prior  del] = size(experimentalfT2')
-alph_length = 5;
+alph_length = 2;
 
 transformResults1 = zeros(alph_length,2);
 transformPredict1 = zeros(alph_length,1);
-nrmseTransform1 = zeros(1,alph_length);
+rmseTransform1 = zeros(1,alph_length);
 transformResults2 = zeros(alph_length,2);
 transformPredict2 = zeros(alph_length,1);
-nrmseTransform2 = zeros(1,alph_length);
+rmseTransform2 = zeros(1,alph_length);
 transformResults3 = zeros(alph_length,2);
 transformPredict3 = zeros(alph_length,1);
-nrmseTransform3 = zeros(1,alph_length);
+rmseTransform3 = zeros(1,alph_length);
 
 
 % take one out for each of the set of answer density functions
@@ -179,6 +179,10 @@ for indx = 1:tot_Prior
     n_std_dev = 0.02 .* trapz(answer_oneOut) %normalise for unknown distribution, SNR is known
 
     % the prior of other results that is being used
+    f_uncertain_prior = std(prior')';
+    f_uncertain_prior_interpol = interp1(experimentalT2Axis, f_mean_prior, T2, 'pchip')';
+    %f_uncertain_prior_interpol = ones(Ny,1);
+    
     f_mean_prior =mean(prior')'; %mean of all previous experimental data
     f_mean_prior_interpolated = interp1(experimentalT2Axis, f_mean_prior, T2, 'spline')';
     f_answer = interp1(experimentalT2Axis, answer_oneOut, T2, 'spline')';
@@ -189,38 +193,39 @@ for indx = 1:tot_Prior
     hold on
     %plot(experimentalT2Axis, f_mean_prior);
     plot(T2, f_answer);
-    plot(T2, f_mean_prior_interpolated);
+    errorbar(T2, f_mean_prior_interpolated, f_uncertain_prior_interpol);
+    
     set(gca, 'XScale', 'log') 
     hold off
        
     
     
-    [alph transformResults1Individual, transformPredict1Individual, nrmseTransform1Individual] ...
+    [alph transformResults1Individual, transformPredict1Individual, rmseTransform1Individual] ...
     = bayesianEstimateIntegralTransform(transform1, f_answer, ...
     n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, alph_length);
 
-    [alph transformResults2Individual, transformPredict2Individual, nrmseTransform2Individual] ...
+    [alph transformResults2Individual, transformPredict2Individual, rmseTransform2Individual] ...
         = bayesianEstimateIntegralTransform(transform2, f_answer, ...
         n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, alph_length);
 
-    [alph transformResults3Individual, transformPredict3Individual, nrmseTransform3Individual] ...
+    [alph transformResults3Individual, transformPredict3Individual, rmseTransform3Individual] ...
         = bayesianEstimateIntegralTransform(transform3, f_answer,...
         n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, alph_length);
 
     
     transformResults1 = transformResults1 + transformResults1Individual;
     transformPredict1 = transformPredict1 + transformPredict1Individual;
-    nrmseTransform1 = nrmseTransform1 + nrmseTransform1Individual;
+    rmseTransform1 = rmseTransform1 + rmseTransform1Individual;
     
         
     transformResults2 = transformResults2 + transformResults2Individual;
     transformPredict2 = transformPredict2 + transformPredict2Individual;
-    nrmseTransform2 = nrmseTransform2 + nrmseTransform2Individual;
+    rmseTransform2 = rmseTransform2 + rmseTransform2Individual;
     
         
     transformResults3 = transformResults3 + transformResults3Individual;
     transformPredict3 = transformPredict3 + transformPredict3Individual;
-    nrmseTransform3 = nrmseTransform3 + nrmseTransform3Individual;
+    rmseTransform3 = rmseTransform3 + rmseTransform3Individual;
     toc
     
 end
@@ -230,30 +235,30 @@ end
 
 transformResults1 = transformResults1 ./ tot_Prior;
 transformPredict1 = transformPredict1 ./ tot_Prior;
-nrmseTransform1 = nrmseTransform1 ./ tot_Prior;
+rmseTransform1 = rmseTransform1 ./ tot_Prior;
 
 transformResults2 = transformResults2 ./ tot_Prior;
 transformPredict2 = transformPredict2 ./ tot_Prior;
-nrmseTransform2 = nrmseTransform2 ./ tot_Prior;
+rmseTransform2 = rmseTransform2 ./ tot_Prior;
 
 
 transformResults3 = transformResults3 ./ tot_Prior;
 transformPredict3 = transformPredict3 ./ tot_Prior;
-nrmseTransform3 = nrmseTransform3 ./ tot_Prior;
+rmseTransform3 = rmseTransform3 ./ tot_Prior;
 
 
 
 
 %{
-[alph transformResults1, transformPredict1, nrmseTransform1] ...
+[alph transformResults1, transformPredict1, rmseTransform1] ...
     = bayesianEstimateIntegralTransform(transform1, f_answer, ...
     n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated);
 
-[alph transformResults2, transformPredict2, nrmseTransform2] ...
+[alph transformResults2, transformPredict2, rmseTransform2] ...
     = bayesianEstimateIntegralTransform(transform2, f_answer, ...
     n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated);
 
-[alph transformResults3, transformPredict3, nrmseTransform3] ...
+[alph transformResults3, transformPredict3, rmseTransform3] ...
     = bayesianEstimateIntegralTransform(transform3, f_answer,...
     n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated);
 %}
@@ -308,17 +313,17 @@ ylim([10e-6 10e1])
 figure(5)
 clf
 hold on
-plot(alph, nrmseTransform1)
-plot(alph, nrmseTransform2)
-plot(alph, nrmseTransform3)
+plot(alph, rmseTransform1)
+plot(alph, rmseTransform2)
+plot(alph, rmseTransform3)
 
 hold off
 set(gca, 'XScale', 'log')
 set(gca, 'YScale', 'log')
 xlabel('$\alpha$')
-ylabel('nrmse I Bayesian' )
+ylabel('rmse I Bayesian' )
 grid on
-ylim([10e-4 10e6])
+ylim([10e-3 10e2])
 
 
 
@@ -368,7 +373,7 @@ end
 % INPUTS: 
 %    g: 
 % OUTPUTS:
-function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty, nrmse_bayesian]  = ...
+function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty, rmse_bayesian]  = ...
     bayesianEstimateIntegralTransform(g_intTransform,  f_answer, n_std_dev, noise_mean, T2, K2, tau2, prior_f, alph_length)
     % test intergation over whole timeline window
     % test different regularisation coefficients, alpha.
@@ -430,10 +435,12 @@ function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty
     intTransform_givenalpha(:,1) = mean(intTransform_results')';
     intTransform_givenalpha(:,2) = std(intTransform_results')';
 
-    % plot nrmse of the porosity estimator
-    nrmse_bayesian = sqrt(mean(((intTransform_results - actual_intTransform).^2)'));    
+    % plot rmse of the porosity estimator
+    rmse_bayesian = sqrt(mean(((intTransform_results - actual_intTransform).^2)'));    
     
-    nrmse_bayesian = nrmse_bayesian ./ actual_intTransform; %normalise to nnrmse
+    %actual_intTransform
+    
+    %rmse_bayesian = rmse_bayesian ./ abs(mean(intTransform_results')); %normalise to nrmse
     
     
     

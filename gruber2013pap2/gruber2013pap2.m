@@ -102,7 +102,7 @@ actualBFV = mask_Tc*f_answer
 
 %--------------- running simulations and results
 
-results_leng = 100;
+results_leng = 5000;
 results_T2meanold = zeros(1,results_leng);
 results_T2meannew = zeros(1,results_leng);
 
