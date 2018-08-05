@@ -8,7 +8,7 @@
 %Aim: Estimating quantities like fraction of bound fluids from NMR
 %relaxomtery measurements, checking different priors
 
-% this file implements 1-out corss validation
+% this file implements 1-out cross validation
 
 % algorithm goes as follows:
 %   load up f mean prior from high quality data
