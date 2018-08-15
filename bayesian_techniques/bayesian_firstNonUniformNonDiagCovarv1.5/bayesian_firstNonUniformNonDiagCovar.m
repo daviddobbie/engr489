@@ -155,7 +155,7 @@ hold off
 %}
 
 [tot_Prior  del] = size(experimentalfT2')
-alph_length = 40;
+alph_length = 30;
 
 transformResults1 = zeros(alph_length,2);
 transformPredict1 = zeros(alph_length,1);
@@ -181,9 +181,24 @@ for indx = 1:tot_Prior
     
     n_std_dev = 0.2 .* trapz(answer_oneOut) %normalise for unknown distribution, SNR is known
 
+    
+    
     % the prior of other results that is being used
-    f_uncertain_prior = std(prior')';
-    f_uncertain_prior_interpol = interp1(experimentalT2Axis, f_uncertain_prior, T2, 'pchip',0)';
+    interpol_prior = interp1(experimentalT2Axis, prior, T2, 'pchip',0)';
+    size(interpol_prior);
+    
+    
+    %%%% ------ determining the uncertainty of each measurement
+    f_uncertain_prior = cov(interpol_prior);
+    %%%% ------
+    
+    
+    
+    
+    size(f_uncertain_prior);
+    
+    %f_uncertain_prior_interpol = interp1(experimentalT2Axis, f_uncertain_prior', T2, 'pchip',0)';
+
     %f_uncertain_prior_interpol = ones(Ny,1);
     
     f_mean_prior =mean(prior')'; %mean of all previous experimental data
@@ -196,26 +211,26 @@ for indx = 1:tot_Prior
     hold on
     %plot(experimentalT2Axis, f_mean_prior);
     plot(T2, f_answer);
-    errorbar(T2, f_mean_prior_interpolated, f_uncertain_prior_interpol);
+    errorbar(T2, f_mean_prior_interpolated, diag(f_uncertain_prior));
     
     set(gca, 'XScale', 'log') 
     hold off
        
-    est_alpha = estimateAlphaFromPrior(n_std_dev, f_uncertain_prior_interpol);
+    est_alpha = estimateAlphaFromPrior(n_std_dev, f_uncertain_prior);
     alpha_estimations(indx) = est_alpha;
     
     
     [alph transformResults1Individual, transformPredict1Individual, rmseTransform1Individual] ...
     = bayesianEstimateIntegralTransform(transform1, f_answer, ...
-    n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, f_uncertain_prior_interpol, alph_length);
+    n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, f_uncertain_prior, alph_length);
 
     [alph transformResults2Individual, transformPredict2Individual, rmseTransform2Individual] ...
         = bayesianEstimateIntegralTransform(transform2, f_answer, ...
-        n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, f_uncertain_prior_interpol, alph_length);
+        n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated, f_uncertain_prior, alph_length);
 
     [alph transformResults3Individual, transformPredict3Individual, rmseTransform3Individual] ...
         = bayesianEstimateIntegralTransform(transform3, f_answer,...
-        n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated,f_uncertain_prior_interpol, alph_length);
+        n_std_dev, noise_mean, T2, K2, tau2, f_mean_prior_interpolated,f_uncertain_prior, alph_length);
 
     
     transformResults1 = transformResults1 + transformResults1Individual;
@@ -377,16 +392,18 @@ l2.LineStyle = '--';
 l3 = line([mean_est_alpha+std_est_alpha mean_est_alpha+std_est_alpha],y1);
 l3.Color = [0 .5 .5]
 l3.LineStyle = '--';
-
-
 hold off
+
+
 xlabel('$\alpha$')
 ylabel('rmse I Bayesian' )
 grid on
 %ylim([10e-3 10e2])
 
 
-
+figure(6)
+clf
+cdfplot(alpha_estimations)
 
 
 %% functions
@@ -459,7 +476,7 @@ function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty
     
     alpha_length = alph_length;
     alpha_axis = logspace(-5,5,alpha_length);
-    num_attempts = 20;
+    num_attempts = 50;
 
     intTransform_results = zeros(alpha_length,num_attempts);
     intTransform_computed_uncertainty = zeros(alpha_length,1);
@@ -474,7 +491,7 @@ function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty
             noise = n_std_dev*normrnd(noise_mean, 1, [N2 ,1]);
             m = K2*f_answer + noise;  
 
-            Cf = (covar_prior_f + n_std_dev).*eye(Ny)./(alpha);
+            Cf = (covar_prior_f)./(alpha);
             Cn = (n_std_dev)^2*eye(N2);
 
             %mu_f = mean((T2'.*f_answer)');
