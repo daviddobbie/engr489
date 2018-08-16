@@ -190,11 +190,6 @@ for indx = 1:tot_Prior
     
     %%%% ------ determining the uncertainty of each measurement
     f_uncertain_prior = cov(interpol_prior);
-    %%%% ------
-    
-    
-    
-    
     size(f_uncertain_prior);
     
     %f_uncertain_prior_interpol = interp1(experimentalT2Axis, f_uncertain_prior', T2, 'pchip',0)';
@@ -208,14 +203,17 @@ for indx = 1:tot_Prior
     % plot each one-out versus prior
     figure(8)
     clf
-    hold on
+
     %plot(experimentalT2Axis, f_mean_prior);
+    hold on
     plot(T2, f_answer);
     errorbar(T2, f_mean_prior_interpolated, diag(f_uncertain_prior));
-    
     set(gca, 'XScale', 'log') 
     hold off
        
+    
+    
+    
     est_alpha = estimateAlphaFromPrior(n_std_dev, f_uncertain_prior);
     alpha_estimations(indx) = est_alpha;
     
@@ -536,11 +534,7 @@ function [alpha_axis, intTransform_givenalpha, intTransform_computed_uncertainty
     
     %rmse_bayesian = rmse_bayesian ./ abs(mean(intTransform_results')); %normalise to nrmse
     
-    
-    
-
 end
-
 
 
 
