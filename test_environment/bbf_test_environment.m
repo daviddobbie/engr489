@@ -84,15 +84,17 @@ for idx = 1:Ny
 end
 
 % this function comes from Gruber 2013, the tapered area used.
-bfv_tapered = ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
+bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
 
 
 %% Step 2: Begin Leave One Out Cross Validation
 
-test_count = 50;
+test_count = 20;
 
-bff_est_bayes_sharp_results = zeros(test_count*tot_Prior,1);
-bff_est_bayes_tapered_results = zeros(test_count*tot_Prior,1);
+bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
+bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
+bff_est_ilt_error = zeros(test_count*tot_Prior,1);
+bff_est_iltx_error = zeros(test_count*tot_Prior,1);
 
 for test_indx = 1:test_count
     test_indx
@@ -110,35 +112,38 @@ for test_indx = 1:test_count
         noise = n_sigma*normrnd(0, 1, [N2 ,1]); %assumes AWGN
         m = K2*answer_oneOut + noise; % generates simulated data
         
-        if(indx==1)
-            figure(3)
-            clf
-            plot(tau2, m)
-            ylim([-1 100])
-        end
-        
+
         
         % generate estimates of the bff
         bff_est_bayes_sharp = bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior);
         bff_est_bayes_tapered = bayes_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, prior);        
+        bff_est_ilt= ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);              
+        bff_est_iltx= iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2);              
+        
         
         bff_actual = bff_answer(answer_oneOut, bfv_sharp);
         
         
         bff_est_bayes_sharp_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_sharp - bff_actual);
         bff_est_bayes_tapered_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_tapered - bff_actual); 
-
-
+        bff_est_ilt_error(test_indx*tot_Prior + indx) = abs(bff_est_ilt - bff_actual); 
+        bff_est_iltx_error(test_indx*tot_Prior + indx) = abs(bff_est_iltx - bff_actual); 
 
     end
 
 end
+
+%% Step 3 - Display results of the error made
 
 figure(2)
 clf
 hold on
 cdfplot(bff_est_bayes_sharp_error);
 cdfplot(bff_est_bayes_tapered_error);
-
+cdfplot(bff_est_ilt_error);
+cdfplot(bff_est_iltx_error);
+legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est. BFV', ...
+    'ILT+ est. BFV')
+xlabel('BFF Absolute Error')
 hold off
 

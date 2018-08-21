@@ -26,8 +26,7 @@ function [estimate compute_time] = bayes_estimator(g_bfv, m, K, n_sigma,...
     
     estimate_bfv = g_bfv' * est_f;
     estimate_porosity = g_poro' * est_f;
-    
-    
+
     estimate = estimate_bfv / estimate_porosity;
     
     %est_uncertainty = sqrt(g_bfv'  *   (Cf - R*K*Cf')  *  g_bfv);
