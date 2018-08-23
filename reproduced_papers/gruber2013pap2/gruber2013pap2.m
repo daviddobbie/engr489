@@ -616,7 +616,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
 
         
         alpha = n_std_dev * sqrt(N)/ norm(c);
-        %alpha =14;
+        alpha =14;
         alpha_hist = [alpha_hist alpha];
         %alpha =  n_std_dev * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
@@ -631,7 +631,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_std_dev)
     %f_est = f_est - under;
     %f_est = f_est ./ trapz(f_est); %normalise to unity
 
-
+    f_est(f_est<0) = 0;
 end
 
 

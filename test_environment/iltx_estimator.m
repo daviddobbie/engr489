@@ -46,7 +46,12 @@ function [estimate, compute_time] = iltx_estimator(g_bfv, m, K, n_sigma,...
 
     indx = 1;
     
-    porosity = m(1);
+    % note: we estimate porosity independnt of an ILT, diverging from the
+    %       method described in paper 2. It mentions in practice that
+    %       simply using TSE estimation is 'reasonable' (pg 23)
+    
+    [tse_porosity] = polyfit(1:100, m(1:100)', 1);
+    porosity = tse_porosity(2);
     
     for w = omega
 
@@ -60,6 +65,10 @@ function [estimate, compute_time] = iltx_estimator(g_bfv, m, K, n_sigma,...
         %mom_var = (n_sigma)^2 * norm(k)^2;
         
         momentVect(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
+        
+        momentVect(indx,:) = [mom, sqrt(mom_var)]; %%since we use uncertainty
+        
+        
         indx = indx + 1;
     end
 
@@ -73,8 +82,25 @@ function [estimate, compute_time] = iltx_estimator(g_bfv, m, K, n_sigma,...
 
     G_opt = [m_comp'; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    W_vect = [1*(ones(size(m_comp')))/n_sigma; 1./momentVect(:,2) ; ...
-        1./tpdAreasVect(:,2)];
+    %W_vect = [1*(ones(size(m_comp')))/n_sigma; 0./momentVect(:,2) ; ...
+     %   0./tpdAreasVect(:,2)];
+     
+     
+    %W_vect = [1*(ones(size(m_comp'))); 0./momentVect(:,2) ; ...
+    %   1./tpdAreasVect(:,2)]
+    %W_vect = [(ones(size(m_comp'))); 0./momentVect(:,2) ; ...
+    %   tpdAreasVect(:,2)]
+    W_vect = [(ones(size(m_comp'))); (momentVect(:,2)) ; ...
+       tpdAreasVect(:,2)];
+    
+    
+    %W_vect = [1*(ones(size(m_comp'))); 0./momentVect(:,2) ; ...
+     % ones(length(tpdAreasVect),1)/2];
+    
+    
+    
+    W_vect;
+    
     W_opt = W_vect .* eye(size(G_opt,1));    
 
  
@@ -213,7 +239,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
     N = nnz(W);
     %N = length(W);
 
-    Ny = size(L,2);
+    %Ny = size(L,2);
     c = ones([length(G)  1]);
 
     % lexiographical sorting of the m matrix
@@ -238,7 +264,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
 
         
         alpha = n_sigma * sqrt(N)/ norm(c);
-        alpha =14;
+        %alpha =10;
         %alpha =  n_sigma * sqrt(size(nnz(W),1))/ norm(c); %implement eq 17 BRD paper  
         %plot(c) 
     end
@@ -248,6 +274,8 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
     plot(alpha_hist)
     %}
     f_est = L'*c;
+    
+    %f_est(f_est<0) = 0;
     %under = min(f_est);
     %f_est = f_est - under;
     %f_est = f_est ./ trapz(f_est); %normalise to unity

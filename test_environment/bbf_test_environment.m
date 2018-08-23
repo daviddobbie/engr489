@@ -35,8 +35,8 @@ experimentalT2Axis = extractedT2Data(:,1); %assuming all have the same T2 axes s
 N2 = 1000; % number of data points in each dimension
 Ny = 30; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
-tE = 200e-6;  % sample interval
-T2 = logspace(-1,4,Ny); %form T2 domain, use log since will be small
+tE = 500e-6;  % sample interval
+T2 = logspace(log10(tE),4,Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  %forms measurement arrays, time tau2 domains
 K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
@@ -89,7 +89,7 @@ bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0
 
 %% Step 2: Begin Leave One Out Cross Validation
 
-test_count = 20;
+test_count = 50;
 
 bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
 bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
@@ -143,7 +143,19 @@ cdfplot(bff_est_bayes_tapered_error);
 cdfplot(bff_est_ilt_error);
 cdfplot(bff_est_iltx_error);
 legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est. BFV', ...
-    'ILT+ est. BFV')
+    'ILT+ est. BFV','location','SouthEast')
 xlabel('BFF Absolute Error')
+xlim([0 1])
 hold off
+
+
+
+
+%root mean squared error
+bayes_sharp_RMSE = (mean((bff_est_bayes_sharp_error).^2))^.5
+bayes_tapered_RMSE = (mean((bff_est_bayes_tapered_error).^2))^.5
+ilt_RMSE = (mean((bff_est_ilt_error).^2))^.5
+iltx_RMSE = (mean((bff_est_iltx_error).^2))^.5
+
+
 
