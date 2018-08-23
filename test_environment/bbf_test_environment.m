@@ -89,12 +89,15 @@ bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0
 
 %% Step 2: Begin Leave One Out Cross Validation
 
-test_count = 50;
+test_count = 100;
 
 bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
 bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
 bff_est_ilt_error = zeros(test_count*tot_Prior,1);
 bff_est_iltx_error = zeros(test_count*tot_Prior,1);
+
+bff_est_eht_error = zeros(test_count*tot_Prior,1);
+
 
 for test_indx = 1:test_count
     test_indx
@@ -118,7 +121,11 @@ for test_indx = 1:test_count
         bff_est_bayes_sharp = bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior);
         bff_est_bayes_tapered = bayes_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, prior);        
         bff_est_ilt= ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);              
-        bff_est_iltx= iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2);              
+        bff_est_iltx= iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
+        
+        bff_est_eht= tapered_area(Tc, m, n_sigma, T2, tE, tau2);           
+        
+
         
         
         bff_actual = bff_answer(answer_oneOut, bfv_sharp);
@@ -128,7 +135,7 @@ for test_indx = 1:test_count
         bff_est_bayes_tapered_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_tapered - bff_actual); 
         bff_est_ilt_error(test_indx*tot_Prior + indx) = abs(bff_est_ilt - bff_actual); 
         bff_est_iltx_error(test_indx*tot_Prior + indx) = abs(bff_est_iltx - bff_actual); 
-
+        bff_est_eht_error(test_indx*tot_Prior + indx) = abs(bff_est_eht - bff_actual); 
     end
 
 end
@@ -142,8 +149,9 @@ cdfplot(bff_est_bayes_sharp_error);
 cdfplot(bff_est_bayes_tapered_error);
 cdfplot(bff_est_ilt_error);
 cdfplot(bff_est_iltx_error);
+cdfplot(bff_est_eht_error);
 legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est. BFV', ...
-    'ILT+ est. BFV','location','SouthEast')
+    'ILT+ est. BFV', 'EHT est. BFV','location','SouthEast')
 xlabel('BFF Absolute Error')
 xlim([0 1])
 hold off
@@ -156,6 +164,7 @@ bayes_sharp_RMSE = (mean((bff_est_bayes_sharp_error).^2))^.5
 bayes_tapered_RMSE = (mean((bff_est_bayes_tapered_error).^2))^.5
 ilt_RMSE = (mean((bff_est_ilt_error).^2))^.5
 iltx_RMSE = (mean((bff_est_iltx_error).^2))^.5
+eht_RMSE = (mean((bff_est_eht_error).^2))^.5
 
 
 
