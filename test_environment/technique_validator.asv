@@ -1,0 +1,139 @@
+%% technique validator
+
+% aim: to validate the recreated techniques to strengthen the comparative
+% result of them. Gruber 2013 More Accurate Estimate is recreated
+
+
+clc
+clear
+
+set(0,'defaultTextInterpreter','latex');
+set(0,'DefaultAxesTitleFontSizeMultiplier', 1)
+set(0,'defaultAxesFontSize',14)
+set(0,'DefaultAxesTitleFontSizeMultiplier', 1.1)
+
+
+N2 = 3000; % number of data points in each dimension
+Ny = 30; % number of bins in relaxation time grids
+sing_val=5; %sets how many singular values we compress to
+tE = 200e-6;  % sample interval
+T2 = logspace(log10(2*tE),log10(tE * N2),Ny); %form T2 domain, use log since will be small
+tau2 = (1:N2)'*tE;  %forms measurement arrays, time tau2 domains
+K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
+
+
+
+
+
+
+% loaded data from Gruber 2013 
+
+model1_true_raw = csvread('validator_models/model1_true.csv');
+model1_estilt_raw = csvread('validator_models/model1_estILT.csv');
+model1_estiltx_raw = csvread('validator_models/model1_estILT+.csv');
+model1_true = interp1(model1_true_raw(:,1), model1_true_raw(:,2), T2, 'pchip',0)';
+model1_estilt_ans = interp1(model1_estilt_raw(:,1), model1_estilt_raw(:,2), T2, 'pchip',0)';
+model1_estiltx_ans = interp1(model1_estiltx_raw(:,1), model1_estiltx_raw(:,2), T2, 'pchip',0)';
+
+
+%n_sigma = 0.8*trapz(T2, model1_true);
+%n_sigma = sqrt(0.01*(trapz(T2, (model1_true).^2)));
+%n_sigma = 0.5*trapz(T2, model1_true);
+n_sigma= 0.1*trapz(model1_true);
+
+figure(1)
+clf
+subplot(2,1,1)
+hold on
+plot(T2,model1_true)
+plot(T2,model1_estilt_ans)
+plot(T2,model1_estiltx_ans)
+hold off
+set(gca, 'XScale', 'log') 
+xlim([1e-4 10])
+legend('True','Estimated ILT','Estimated ILT+')
+
+
+bfv_tapered = zeros(Ny,1);
+
+num_results =20;
+
+model1_estiltx_results = zeros(Ny, num_results);
+model1_estilt_results = zeros(Ny, num_results);
+
+%n_sigma = n_sigma * trapz(T2, model1_true)
+figure(2)
+clf
+p1 = plot(T2,model1_estilt_ans, 'b--')
+p1.LineWidth = 2;
+set(gca, 'XScale', 'log') 
+xlim([1e-4 10])
+ylim([0 0.025])
+        
+for indx = 1:num_results
+    noise = n_sigma*randn(N2,1); %assumes AWGN
+    m = K2*model1_true + noise; % generates simulated data
+    
+    %{
+    figure(4)
+    clf
+    plot(tau2,m)
+    %}
+
+    
+    [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
+    
+    [bff, compute, model1_estilt] = ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);  
+    %{
+        figure(2)
+        hold on
+
+        plot(T2, model1_estilt)
+        set(gca, 'XScale', 'log') 
+        xlim([1e-4 10])
+        ylim([0 0.025])
+%}
+    
+    model1_estiltx_results(:,indx) = model1_estiltx;
+    model1_estilt_results(:,indx) = model1_estilt;
+    
+end
+
+
+model1_estilt = mean(model1_estilt_results')';
+
+model1_estiltx =  mean(model1_estiltx_results')';
+
+RMSE_ilt_techn = ((mean((model1_estilt - model1_estilt_ans).^2))^.5)
+RMSE_ilt_techn = ((mean((model1_estilt - model1_estilt_ans).^2))^.5)
+
+% returns percentage of error, deviation form the actual simulation
+NRMSE_ilt_techn = 100*(RMSE_ilt_techn)/(mean((model1_estilt_ans).^2))^.5
+max_error_ilt_techn = max(abs(model1_estilt - model1_estilt_ans))
+    
+
+
+
+figure(1)
+subplot(2,1,2)
+hold on
+plot(T2,model1_true)
+p2 = plot(T2,model1_estilt,'r--');
+p2.LineWidth = 2;
+plot(T2,model1_estiltx)
+hold off
+set(gca, 'XScale', 'log') 
+xlim([1e-4 10])
+ylim([0 0.025])
+legend('True','Estimated ILT','Estimated ILT+')
+
+figure(2)
+hold on
+
+p2 = plot(T2,model1_estilt,'r--');
+p2.LineWidth = 2;
+hold off
+set(gca, 'XScale', 'log') 
+xlim([1e-4 10])
+ylim([0 0.025])
+legend('Actual ILT Result','Own ILT Result')

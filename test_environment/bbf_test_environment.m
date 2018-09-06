@@ -72,99 +72,117 @@ SNR_lin = 5;
 
 %% Step 1: Generate the Bound Fluid Integrals
 
-Tc = 10;
+%Tc = 10;
 
+RMSE_all = zeros(length(T2),5);
 
-
-bfv_sharp = zeros(Ny ,1);
-for idx = 1:Ny
-    if T2(idx)<Tc
-        bfv_sharp(idx) = 1;
-    end
-end
-
-% this function comes from Gruber 2013, the tapered area used.
-bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
-
-
-%% Step 2: Begin Leave One Out Cross Validation
-
-test_count = 100;
-
-bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
-bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
-bff_est_ilt_error = zeros(test_count*tot_Prior,1);
-bff_est_iltx_error = zeros(test_count*tot_Prior,1);
-
-bff_est_eht_error = zeros(test_count*tot_Prior,1);
-
-
-for test_indx = 1:test_count
-    test_indx
-    for indx = 1:tot_Prior %for each prior density function
-
-        % the one out answer that is being estimated
-        answer_oneOut = interpol_exp_fT2(:,indx);
-        prior = interpol_exp_fT2;
-        prior(:,indx) = [];
-
-        % this is valid a noise is known
-        n_sigma =  trapz(answer_oneOut)./SNR_lin;
-
-
-        noise = n_sigma*normrnd(0, 1, [N2 ,1]); %assumes AWGN
-        m = K2*answer_oneOut + noise; % generates simulated data
-        
-
-        
-        % generate estimates of the bff
-        bff_est_bayes_sharp = bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior);
-        bff_est_bayes_tapered = bayes_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, prior);        
-        bff_est_ilt= ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);              
-        bff_est_iltx= iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
-        
-        bff_est_eht= tapered_area(Tc, m, n_sigma, T2, tE, tau2);           
-        
-
-        
-        
-        bff_actual = bff_answer(answer_oneOut, bfv_sharp);
-        
-        
-        bff_est_bayes_sharp_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_sharp - bff_actual);
-        bff_est_bayes_tapered_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_tapered - bff_actual); 
-        bff_est_ilt_error(test_indx*tot_Prior + indx) = abs(bff_est_ilt - bff_actual); 
-        bff_est_iltx_error(test_indx*tot_Prior + indx) = abs(bff_est_iltx - bff_actual); 
-        bff_est_eht_error(test_indx*tot_Prior + indx) = abs(bff_est_eht - bff_actual); 
+for Tc_index = 1:length(T2)
+    
+    
+    Tc = T2(Tc_index)
+    Tc_index
+    bfv_sharp = zeros(Ny ,1);
+    for idx = 1:Ny
+        if T2(idx)<Tc
+            bfv_sharp(idx) = 1;
+        end
     end
 
+    % this function comes from Gruber 2013, the tapered area used.
+    bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
+
+
+    %% Step 2: Begin Leave One Out Cross Validation
+
+    test_count = 10;
+
+    bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
+    bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
+    bff_est_ilt_error = zeros(test_count*tot_Prior,1);
+    bff_est_iltx_error = zeros(test_count*tot_Prior,1);
+
+    bff_est_eht_error = zeros(test_count*tot_Prior,1);
+
+
+    for test_indx = 1:test_count
+        test_indx
+        for indx = 1:tot_Prior %for each prior density function
+
+            % the one out answer that is being estimated
+            answer_oneOut = interpol_exp_fT2(:,indx);
+            prior = interpol_exp_fT2;
+            prior(:,indx) = [];
+
+            % this is valid a noise is known
+            n_sigma =  trapz(answer_oneOut)./SNR_lin;
+
+
+            noise = n_sigma*normrnd(0, 1, [N2 ,1]); %assumes AWGN
+            m = K2*answer_oneOut + noise; % generates simulated data
+
+
+
+            % generate estimates of the bff
+            bff_est_bayes_sharp = bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior);
+            bff_est_bayes_tapered = bayes_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, prior);        
+            bff_est_ilt= ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);              
+            bff_est_iltx= iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
+
+            bff_est_eht= tapered_area(Tc, m, n_sigma, T2, tE, tau2);           
+
+
+
+
+            bff_actual = bff_answer(answer_oneOut, bfv_sharp);
+
+
+            bff_est_bayes_sharp_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_sharp - bff_actual);
+            bff_est_bayes_tapered_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_tapered - bff_actual); 
+            bff_est_ilt_error(test_indx*tot_Prior + indx) = abs(bff_est_ilt - bff_actual); 
+            bff_est_iltx_error(test_indx*tot_Prior + indx) = abs(bff_est_iltx - bff_actual); 
+            bff_est_eht_error(test_indx*tot_Prior + indx) = abs(bff_est_eht - bff_actual); 
+        end
+
+    end
+
+    %% Step 3 - Display results of the error made
+
+    figure(2)
+    clf
+    hold on
+    cdfplot(bff_est_bayes_sharp_error);
+    cdfplot(bff_est_bayes_tapered_error);
+    cdfplot(bff_est_ilt_error);
+    cdfplot(bff_est_iltx_error);
+    cdfplot(bff_est_eht_error);
+    legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est.', ...
+        'ILT+ est.', 'EHT est.','location','SouthEast')
+    xlabel('BFF Absolute Error')
+    xlim([0 1])
+    hold off
+
+
+
+
+    %root mean squared error
+    bayes_sharp_RMSE = (mean((bff_est_bayes_sharp_error).^2))^.5
+    bayes_tapered_RMSE = (mean((bff_est_bayes_tapered_error).^2))^.5
+    ilt_RMSE = (mean((bff_est_ilt_error).^2))^.5
+    iltx_RMSE = (mean((bff_est_iltx_error).^2))^.5
+    eht_RMSE = (mean((bff_est_eht_error).^2))^.5
+
+    RMSE_all(Tc_index,1) = bayes_sharp_RMSE;
+    RMSE_all(Tc_index,2) = bayes_tapered_RMSE;
+    RMSE_all(Tc_index,3) = ilt_RMSE;
+    RMSE_all(Tc_index,4) = iltx_RMSE;
+    RMSE_all(Tc_index,5) = eht_RMSE;
 end
 
-%% Step 3 - Display results of the error made
-
-figure(2)
+figure(4)
 clf
-hold on
-cdfplot(bff_est_bayes_sharp_error);
-cdfplot(bff_est_bayes_tapered_error);
-cdfplot(bff_est_ilt_error);
-cdfplot(bff_est_iltx_error);
-cdfplot(bff_est_eht_error);
-legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est. BFV', ...
-    'ILT+ est. BFV', 'EHT est. BFV','location','SouthEast')
-xlabel('BFF Absolute Error')
-xlim([0 1])
-hold off
-
-
-
-
-%root mean squared error
-bayes_sharp_RMSE = (mean((bff_est_bayes_sharp_error).^2))^.5
-bayes_tapered_RMSE = (mean((bff_est_bayes_tapered_error).^2))^.5
-ilt_RMSE = (mean((bff_est_ilt_error).^2))^.5
-iltx_RMSE = (mean((bff_est_iltx_error).^2))^.5
-eht_RMSE = (mean((bff_est_eht_error).^2))^.5
-
-
-
+plot(T2, RMSE_all)
+legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est.', ...
+        'ILT+ est.', 'EHT est.','location','SouthEast')
+xlabel('$T_c$')   
+ylabel('BFF RMSE')
+set(gca, 'XScale', 'log') 
