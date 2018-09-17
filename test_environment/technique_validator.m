@@ -79,19 +79,40 @@ plot_actual_omega(model1_true, T2, omega);
 
 for indx = 1:num_results
 
-    noise = n_sigma*randn(N2,1); %assumes AWGN
-    m = K2*model1_true + noise; % generates simulated data
+    noise = n_sigma*randn(N2-30,1); %assumes AWGN
+    m_long = K2(31:N2,:)*model1_true + noise; % generates simulated data
     
-    %{
+    short_pulse_count = 10;
+    m_short_meausrements = zeros(30,11);
+    for spc_indx = 1:short_pulse_count+1 %include the long pulse here
+       noise_short =n_sigma*randn(30,1);
+       m_short = K2(1:30,:)*model1_true + noise_short;
+       m_short_meausrements(:,spc_indx) = m_short;
+    end
+    m_short_mean = mean(m_short_meausrements')';
+    m = [  m_short_mean  ;  m_long];
+    
+    weight_short_pulse = ones(N2,1);
+    weight_short_pulse(1:30) = sqrt(11)* ones(30,1);
+    
+    m_weighted_for_short_pulse = weight_short_pulse .* m;
+    K_weighted_for_short_pulse = weight_short_pulse .* K2;    
+    
+   %{
     figure(4)
     clf
     plot(tau2,m)
     %}
 
     
-    [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
+ %   [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
     
-    [bff, compute, model1_estilt] = ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);  
+    
+    
+    
+    %[bff, compute, model1_estilt] = ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);  
+    [bff, compute, model1_estilt] = ilt_estimator(bfv_tapered, m_weighted_for_short_pulse ...
+        , K_weighted_for_short_pulse, n_sigma, T2, tE);  
     %{
         figure(2)
         hold on
@@ -104,7 +125,7 @@ for indx = 1:num_results
 
     
     
-    model1_estiltx_results(:,indx) = model1_estiltx;
+    %model1_estiltx_results(:,indx) = model1_estiltx;
     model1_estilt_results(:,indx) = model1_estilt;
     
 end
@@ -112,17 +133,30 @@ end
 
 model1_estilt = mean(model1_estilt_results')';
 
-model1_estiltx =  mean(model1_estiltx_results')';
+%model1_estiltx =  mean(model1_estiltx_results')';
 
 RMSE_ilt_techn = ((mean((model1_estilt - model1_estilt_ans).^2))^.5)
-RMSE_iltx_techn = ((mean((model1_estiltx - model1_estiltx_ans).^2))^.5)
+%RMSE_iltx_techn = ((mean((model1_estiltx - model1_estiltx_ans).^2))^.5)
 
 % returns percentage of error, deviation form the actual simulation
 NRMSE_ilt_techn = 100*(RMSE_ilt_techn)/(mean((model1_estilt_ans).^2))^.5
+
+MSE_ilt_techn = (mean((model1_estilt - model1_estilt_ans).^2));
+MSD = mean((model1_estilt_ans - mean(model1_estilt_ans)).^2);
+
+R2_ilt_techn = 1 - MSE_ilt_techn/MSD
+
 max_error_ilt_techn = max(abs(model1_estilt - model1_estilt_ans))
-    
-NRMSE_iltx_techn = 100*(RMSE_iltx_techn)/(mean((model1_estiltx_ans).^2))^.5
-max_error_iltx_techn = max(abs(model1_estiltx - model1_estiltx_ans))
+   
+
+%R2_ilt_techn = (mean((model1_estilt - model1_estilt_ans).^2)) / (mean((model1_estilt - model1_estilt_ans).^2))
+
+
+%NRMSE_iltx_techn = 100*(RMSE_iltx_techn)/(mean((model1_estiltx_ans).^2))^.5
+%max_error_iltx_techn = max(abs(model1_estiltx - model1_estiltx_ans))
+
+
+
 
 
 figure(1)
@@ -131,7 +165,7 @@ hold on
 plot(T2,model1_true)
 p2 = plot(T2,model1_estilt,'r--');
 p2.LineWidth = 2;
-p3 = plot(T2,model1_estiltx, 'g--')
+%p3 = plot(T2,model1_estiltx, 'g--')
 p3.LineWidth = 2;
 hold off
 set(gca, 'XScale', 'log') 
@@ -156,7 +190,7 @@ legend('Actual ILT Result','Own ILT Result')
 
 
 
-
+%{
 figure(3)
 clf
 hold on
@@ -169,6 +203,8 @@ set(gca, 'XScale', 'log')
 xlim([1e-4 10])
 ylim([0 0.025])
 legend('Actual ILT+ Result','Own ILT+ Result')
+%}
+
 
 function plot_actual_omega(f, T2, omega)
 

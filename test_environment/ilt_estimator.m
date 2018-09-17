@@ -26,7 +26,8 @@ function [estimate, compute_time, f_est] = ilt_estimator(g_bfv, m, K, n_sigma,..
     %this is the method that prevents it being divergent
     alph_past = 0;
     indx = 0;
-    while indx < 15
+    %alpha = n_sigma * sqrt(N2)/ norm(c)
+    while indx < 20
         alph_past = alpha;
         abs(alph_past - alpha);
         K_square = k_comp* k_comp'; %recreate eq 30
@@ -39,10 +40,10 @@ function [estimate, compute_time, f_est] = ilt_estimator(g_bfv, m, K, n_sigma,..
         c = inv(K_square + alpha*eye(length(m_comp))); %eq 29
         c = c'*m_comp;
         alpha = n_sigma * sqrt(N2)/ norm(c);
-        %alpha = 10;
+        %alpha = 14;
         indx = indx + 1;
     end
-
+    alpha
     hold off
     f_est = max(0, k_comp'*c);
     
@@ -70,7 +71,7 @@ function [M_compressed K_compressed] = compressData(M,K)
     N = length(M);
 
     
-    sing_val = 20;
+    sing_val = 10;
     
     
 
