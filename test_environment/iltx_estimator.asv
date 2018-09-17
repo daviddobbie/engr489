@@ -100,7 +100,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
 
     W_vect = [ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)) ; ...
-       1./(tpdAreasVect(:,2))]  ;    
+       1000./(tpdAreasVect(:,2))]  ;    
 
 
    
@@ -143,8 +143,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     
     
-    n_sigma_avg = mean(1./W_vect);
-    %n_sigma_avg = n_sigma;
+    n_sigma_avg = mean(1./W_vect)
     
     f_est = optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
 

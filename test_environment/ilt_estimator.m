@@ -28,6 +28,7 @@ function [estimate, compute_time, f_est] = ilt_estimator(g_bfv, m, K, n_sigma,..
     indx = 0;
     %alpha = n_sigma * sqrt(N2)/ norm(c)
     while indx < 20
+    %while abs(alph_past - alpha) > 1e-8 && indx < 30
         alph_past = alpha;
         abs(alph_past - alpha);
         K_square = k_comp* k_comp'; %recreate eq 30

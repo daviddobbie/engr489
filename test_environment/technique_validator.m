@@ -56,7 +56,7 @@ legend('True','Estimated ILT','Estimated ILT+')
 
 bfv_tapered = zeros(Ny,1);
 
-num_results =10;
+num_results =50;
 
 model1_estiltx_results = zeros(Ny, num_results);
 model1_estilt_results = zeros(Ny, num_results);
@@ -72,13 +72,15 @@ ylim([0 0.025])
       
 
 omega = linspace(-0.5,1,12);
-
+T_cutoff = [0.01 0.1 1];
+    
 plot_actual_omega(model1_true, T2, omega);
+
+actual_tapered_area = plot_actual_tapered_area(model1_true, T2, T_cutoff);
 
 
 
 for indx = 1:num_results
-
     noise = n_sigma*randn(N2-30,1); %assumes AWGN
     m_long = K2(31:N2,:)*model1_true + noise; % generates simulated data
     
@@ -94,7 +96,6 @@ for indx = 1:num_results
     
     weight_short_pulse = ones(N2,1);
     weight_short_pulse(1:30) = sqrt(11)* ones(30,1);
-    
     m_weighted_for_short_pulse = weight_short_pulse .* m;
     K_weighted_for_short_pulse = weight_short_pulse .* K2;    
     
@@ -105,7 +106,8 @@ for indx = 1:num_results
     %}
 
     
- %   [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
+    [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, ...
+    m, K2, n_sigma, T2, tE, tau2); 
     
     
     
@@ -123,6 +125,7 @@ for indx = 1:num_results
         ylim([0 0.025])
 %}
 
+        
     
     
     %model1_estiltx_results(:,indx) = model1_estiltx;
@@ -131,12 +134,19 @@ for indx = 1:num_results
 end
 
 
+plot_overall_est_omega(model1_estiltx, T2, omega);
+est_tapered_area = plot_est_tapered_area(model1_estiltx, T2, T_cutoff);
+
+
+
+
+
+
 model1_estilt = mean(model1_estilt_results')';
 
 %model1_estiltx =  mean(model1_estiltx_results')';
 
 RMSE_ilt_techn = ((mean((model1_estilt - model1_estilt_ans).^2))^.5)
-%RMSE_iltx_techn = ((mean((model1_estiltx - model1_estiltx_ans).^2))^.5)
 
 % returns percentage of error, deviation form the actual simulation
 NRMSE_ilt_techn = 100*(RMSE_ilt_techn)/(mean((model1_estilt_ans).^2))^.5
@@ -145,15 +155,17 @@ MSE_ilt_techn = (mean((model1_estilt - model1_estilt_ans).^2));
 MSD = mean((model1_estilt_ans - mean(model1_estilt_ans)).^2);
 
 R2_ilt_techn = 1 - MSE_ilt_techn/MSD
-
 max_error_ilt_techn = max(abs(model1_estilt - model1_estilt_ans))
    
 
-%R2_ilt_techn = (mean((model1_estilt - model1_estilt_ans).^2)) / (mean((model1_estilt - model1_estilt_ans).^2))
+RMSE_iltx_techn = ((mean((model1_estiltx - model1_estiltx_ans).^2))^.5)
+NRMSE_iltx_techn = 100*(RMSE_iltx_techn)/(mean((model1_estiltx_ans).^2))^.5
+max_error_iltx_techn = max(abs(model1_estiltx - model1_estiltx_ans))
 
+MSE_iltx_techn = (mean((model1_estiltx - model1_estiltx_ans).^2));
+MSD_iltx = mean((model1_estiltx_ans - mean(model1_estiltx_ans)).^2);
+R2_iltx_techn = 1 - MSE_iltx_techn/MSD_iltx
 
-%NRMSE_iltx_techn = 100*(RMSE_iltx_techn)/(mean((model1_estiltx_ans).^2))^.5
-%max_error_iltx_techn = max(abs(model1_estiltx - model1_estiltx_ans))
 
 
 
@@ -163,9 +175,9 @@ figure(1)
 subplot(2,1,2)
 hold on
 plot(T2,model1_true)
-p2 = plot(T2,model1_estilt,'r--');
+p2 = plot(T2,model1_estilt,'r-');
 p2.LineWidth = 2;
-%p3 = plot(T2,model1_estiltx, 'g--')
+p3 = plot(T2,model1_estiltx, 'g-')
 p3.LineWidth = 2;
 hold off
 set(gca, 'XScale', 'log') 
@@ -185,25 +197,20 @@ ylim([0 0.025])
 legend('Actual ILT Result','Own ILT Result')
 
 
-
-
-
-
-
-%{
 figure(3)
 clf
 hold on
-p2 = plot(T2,model1_estiltx_ans,'b--');
+p2 = plot(T2,model1_estiltx_ans,'b-');
 p2.LineWidth = 2;
-p2 = plot(T2,model1_estiltx,'r--');
+p2 = plot(T2,model1_estiltx,'r-');
+
 p2.LineWidth = 2;
 hold off
 set(gca, 'XScale', 'log') 
 xlim([1e-4 10])
 ylim([0 0.025])
 legend('Actual ILT+ Result','Own ILT+ Result')
-%}
+
 
 
 function plot_actual_omega(f, T2, omega)
@@ -228,6 +235,94 @@ function plot_actual_omega(f, T2, omega)
     p3.LineWidth = 2;
     subplot(2,1,2)
     xlabel('$\omega$')
+    
+    
+end
+
+function plot_overall_est_omega(f, T2, omega)
+
+
+    momentKern = ones(size(omega,2), length(f));
+    poro = trapz(f); 
+    indx = 1;
+    for w = omega
+        kern = (T2.^(w))/poro;
+        momentKern(indx,:) = kern;    
+        indx = indx +1;
+    end
+    
+    actual_mom = momentKern * f;
+    
+    figure(55)
+    subplot(2,1,1)
+    hold on
+    p3 = plot(omega, actual_mom, 'r--')
+    p3.LineWidth = 2;
+    subplot(2,1,2)
+    xlabel('$\omega$')
+    
+    
+end
+
+
+function actual_tapered_area = plot_actual_tapered_area(f, T2, T_cutoff)
+
+
+    taperedKern = ones(size(T_cutoff,2), length(f));
+    indx = 1;
+    for Tc = T_cutoff
+        C = 0.7213 / Tc;
+        alpha = 1.572*Tc;
+        beta = 0.4087 / Tc;
+        gamma = 1./T2 + beta;
+        kern = (C./gamma).*tanh(alpha*gamma);
+        taperedKern(indx,:) = kern;
+        indx = indx +1;       
+    end
+    
+    actual_area = taperedKern * f;
+    actual_tapered_area = actual_area;
+    
+    
+    figure(56)
+    clf
+    subplot(2,1,1)
+    hold on
+    p3 = plot(T_cutoff, actual_area, 'b--')
+    p3.LineWidth = 2;
+    subplot(2,1,2)
+    xlabel('$T_c$')
+    
+    
+end
+
+
+function est_tapered_area = plot_est_tapered_area(f, T2, T_cutoff)
+
+
+    taperedKern = ones(size(T_cutoff,2), length(f));
+    indx = 1;
+    for Tc = T_cutoff
+        C = 0.7213 / Tc;
+        alpha = 1.572*Tc;
+        beta = 0.4087 / Tc;
+        gamma = 1./T2 + beta;
+        kern = (C./gamma).*tanh(alpha*gamma);
+        taperedKern(indx,:) = kern;
+        indx = indx +1;       
+    end
+    
+    actual_area = taperedKern * f;
+    est_tapered_area = actual_area;
+    
+    
+    figure(56)
+    subplot(2,1,1)
+    hold on
+    p3 = plot(T_cutoff, actual_area, 'r--')
+    p3.LineWidth = 2;
+    subplot(2,1,2)
+    xlabel('$T_c$')
     
     
 end
