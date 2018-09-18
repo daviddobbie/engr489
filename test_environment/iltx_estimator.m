@@ -50,7 +50,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     %       method described in paper 2. It mentions in practice that
     %       simply using TSE estimation is 'reasonable' (pg 23)
     
-    [tse_porosity] = polyfit(1:100, m(1:100)', 1);
+    [tse_porosity] = polyfit(1:30, m(1:30)', 1);
     porosity = tse_porosity(2);
     
     for w = omega
@@ -97,13 +97,13 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     %W_vect = [1*(ones(size(m_comp')))/n_sigma; 0./momentVect(:,2) ; ...
      %   0./tpdAreasVect(:,2)];
      
-    
-
-    W_vect = [ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)) ; ...
-       1./(tpdAreasVect(:,2))]  ;    
 
 
-   
+    W_vect = [1*ones(size(m_comp'));  1*n_sigma./(momentVect(:,2)) ; ...
+       n_sigma./(tpdAreasVect(:,2))]  ;    
+
+    n_sigma = n_sigma * (1/2)
+    %n_sigma = n_sigma * sqrt(1/3)   
    
    %n_sigma = n_sigma*mean(1./find(W_vect))
    
@@ -138,16 +138,16 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     W_opt = W_vect .* eye(size(G_opt,1));   
      
-    W_opt_linear_func = [0*ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)) ; ...
-       1./(tpdAreasVect(:,2))] .* eye(size(G_opt,1)) ;    
+ 
     
     
     
     n_sigma_avg = mean(1./W_vect);
-    %n_sigma_avg = n_sigma;
+    n_sigma_avg = n_sigma;
     
-    f_est = optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
-
+    f_est = (0.58)*optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
+% magic number comes from scaling for tapered areas. It does not seem to
+% behave in the context of the optimisation problem.
     
     estimate_bfv = g_bfv' * f_est;
     estimate_porosity = g_poro' * f_est;
@@ -272,11 +272,18 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
     clf
     plot(abs(G))
     
+    figure(22)
+    clf
+    hold on
+    set(gca, 'XScale', 'log') 
+    ylim([0 0.05])
+    
     L_normal = L;
     L = W*L;  
     
     N = nnz(W);
-    
+    N = sum(diag(W)>1e-1);
+
     c = ones([length(G)  1]);
     
     f_est = c;
@@ -295,7 +302,11 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
             %made symmetric and semi-positive definite
             c = inv(L_square + alpha*eye(length(G))); %eq 29
             c = c'*G;
-            alpha = n_sigma *sqrt(N)/ norm(c);
+            alpha = 1*n_sigma *sqrt(N)/ norm(c);
+            figure(22)
+            plot(max(L'*c,0))
+            set(gca, 'XScale', 'log') 
+            pause(0.1)
             
             %alpha = 14;
             indx = indx + 1;
@@ -308,6 +319,9 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
 
     
     f_est = max(L'*c,0);
+    
+    f_est = f_est - min(f_est);
+    
     %f_est = max(L'*c,0);
 end
 

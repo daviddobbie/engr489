@@ -17,7 +17,7 @@ N2 = 3000; % number of data points in each dimension
 Ny = 30; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
 tE = 200e-6;  % sample interval
-T2 = logspace(log10(2*tE),log10(tE * N2),Ny); %form T2 domain, use log since will be small
+T2 = logspace(log10(2*tE),log10(tE * (N2-4)),Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  %forms measurement arrays, time tau2 domains
 K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
@@ -56,7 +56,7 @@ legend('True','Estimated ILT','Estimated ILT+')
 
 bfv_tapered = zeros(Ny,1);
 
-num_results =50;
+num_results =100;
 
 model1_estiltx_results = zeros(Ny, num_results);
 model1_estilt_results = zeros(Ny, num_results);
@@ -128,7 +128,7 @@ for indx = 1:num_results
         
     
     
-    %model1_estiltx_results(:,indx) = model1_estiltx;
+    model1_estiltx_results(:,indx) = model1_estiltx;
     model1_estilt_results(:,indx) = model1_estilt;
     
 end
@@ -140,7 +140,7 @@ est_tapered_area = plot_est_tapered_area(model1_estiltx, T2, T_cutoff);
 
 
 
-
+model1_estiltx = mean(model1_estiltx_results')';
 
 model1_estilt = mean(model1_estilt_results')';
 

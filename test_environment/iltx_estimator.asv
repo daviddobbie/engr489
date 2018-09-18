@@ -50,7 +50,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     %       method described in paper 2. It mentions in practice that
     %       simply using TSE estimation is 'reasonable' (pg 23)
     
-    [tse_porosity] = polyfit(1:100, m(1:100)', 1);
+    [tse_porosity] = polyfit(1:30, m(1:30)', 1);
     porosity = tse_porosity(2);
     
     for w = omega
@@ -99,8 +99,8 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
      
     
 
-    W_vect = [ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)) ; ...
-       1000./(tpdAreasVect(:,2))]  ;    
+    W_vect = [2*ones(size(m_comp'));  1*n_sigma./(momentVect(:,2)) ; ...
+       n_sigma./(tpdAreasVect(:,2)).^2 ]  ;    
 
 
    
@@ -138,14 +138,14 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     W_opt = W_vect .* eye(size(G_opt,1));   
      
-    W_opt_linear_func = [0*ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)) ; ...
-       1./(tpdAreasVect(:,2))] .* eye(size(G_opt,1)) ;    
+ 
     
     
     
-    n_sigma_avg = mean(1./W_vect)
+    n_sigma_avg = mean(1./W_vect);
+    n_sigma_avg = n_sigma;
     
-    f_est = optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
+    f_est = sqrt(1/2)*optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
 
     
     estimate_bfv = g_bfv' * f_est;
@@ -271,11 +271,17 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
     clf
     plot(abs(G))
     
+    figure(22)
+    clf
+    hold on
+    set(gca, 'XScale', 'log') 
+    
     L_normal = L;
     L = W*L;  
     
     N = nnz(W);
-    
+    N = sum(diag(W)>1e-1);
+
     c = ones([length(G)  1]);
     
     f_est = c;
@@ -283,7 +289,7 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
     alph_past = 0;
     indx = 0;
     %while abs(alph_past - alpha) > 1e-8 && indx < 30
-    while  indx <20
+    while  indx <10
             alph_past = alpha; 
             L_square = L* L';      
             h = heaviside(L_square);
@@ -294,7 +300,11 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
             %made symmetric and semi-positive definite
             c = inv(L_square + alpha*eye(length(G))); %eq 29
             c = c'*G;
-            alpha = n_sigma *sqrt(N)/ norm(c);
+            alpha = 1*n_sigma *sqrt(N)/ norm(c);
+            figure(22)
+            plot(max(L'*c,0))
+            set(gca, 'XScale', 'log') 
+            pause(0.1)
             
             %alpha = 14;
             indx = indx + 1;
@@ -307,6 +317,9 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
 
     
     f_est = max(L'*c,0);
+    
+    f_est = f_est - min(f_est);
+    
     %f_est = max(L'*c,0);
 end
 
