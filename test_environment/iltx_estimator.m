@@ -9,7 +9,7 @@
 % F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 95-103
 
 function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,...
-    T2, tE, tau2)
+    T2, tE, tau2, moment_true)
 
     tic
     
@@ -44,18 +44,21 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     momentVect = ones(size(omega,2), 2);
     momentKern = ones(size(omega,2), Ny);
 
-    indx = 1;
+
     
     % note: we estimate porosity independnt of an ILT, diverging from the
     %       method described in paper 2. It mentions in practice that
     %       simply using TSE estimation is 'reasonable' (pg 23)
     
     [tse_porosity] = polyfit(1:30, m(1:30)', 1);
-    porosity = tse_porosity(2);
     
+    porosity = abs(tse_porosity(2));
+    
+    
+    indx = 1;
     for w = omega
 
-        kern = (T2.^(w))/porosity;
+        kern = ((T2).^(w))/porosity;
         momentKern(indx,:) = kern;
         [mom, mom_var] = mellinTransform(m, w, tE, porosity, n_sigma, n_sigma);
         
@@ -74,6 +77,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
 
     % weighting measurements with short pulse increased SNR
     
+    
     weight_short_pulse = ones(size(m));
     weight_short_pulse(1:30) = sqrt(11)* ones(30,1);
     m_weighted_for_short_pulse = weight_short_pulse .* m;
@@ -90,8 +94,8 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     m_comp = m_comp'; % compressed m vector
 
 
+    %G_opt = [m_comp'; moment_true ; tpdAreasVect(:,1)]; %eq 13 pap4
     G_opt = [m_comp'; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
-    
     
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
     %W_vect = [1*(ones(size(m_comp')))/n_sigma; 0./momentVect(:,2) ; ...
@@ -99,10 +103,26 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
      
 
 
-    W_vect = [1*ones(size(m_comp'));  1*n_sigma./(momentVect(:,2)) ; ...
-       n_sigma./(tpdAreasVect(:,2))]  ;    
+     %W_vect = [ones(size(m_comp'));  min(1*n_sigma./(momentVect(:,2).^2), 10); ...
+     %0*n_sigma./(tpdAreasVect(:,2))]  ;
+ 
+ 
+ 
+     %W_vect = [ones(size(m_comp'))/n_sigma;  1*ones(size(momentVect(:,2))),; ...
+     %1*n_sigma./(tpdAreasVect(:,2))]  ;
+ 
+ 
+      W_vect = [1*ones(size(m_comp'))/n_sigma;  0./(momentVect(:,2)); ...
+     1./(tpdAreasVect(:,2))]  ;
+ 
+    W_vect =0.2* W_vect;
+  
+    %W_vect = 0.1*W_vect * length(W_vect) / norm(W_vect) % change relative weighting, no effect on regularisation
+     %W_vect = [0*ones(size(m_comp'));  1*n_sigma./(momentVect(:,2)); ...
+     %   0*n_sigma./(tpdAreasVect(:,2))]  ;  
 
-    n_sigma = n_sigma * (1/2)
+
+    %n_sigma = n_sigma * (1/2)
     %n_sigma = n_sigma * sqrt(1/3)   
    
    %n_sigma = n_sigma*mean(1./find(W_vect))
@@ -144,10 +164,22 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     n_sigma_avg = mean(1./W_vect);
     n_sigma_avg = n_sigma;
+    n_sigma_avg = 0.1;
     
-    f_est = (0.58)*optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
-% magic number comes from scaling for tapered areas. It does not seem to
-% behave in the context of the optimisation problem.
+    f_est = optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
+    
+    
+    
+   %iltx_inversion_multiple(G_opt, L_opt, W_opt, n_sigma_avg, T2)
+
+    
+    
+    %est_tapered = tpdAreaKern * f_est;
+    %scale = tpdAreasVect(1,1)./est_tapered(1);
+    
+    
+    %f_est = scale * f_est;
+
     
     estimate_bfv = g_bfv' * f_est;
     estimate_porosity = g_poro' * f_est;
@@ -182,12 +214,17 @@ function [area area_uncert] = exponentialHaarTransform(tE, M, sigma_n, Tc, T2,ta
 
     % implementing (-1)^n as vector operator  
     n = floor(tau2/(2*alpha));
-    n_term = ((-1).^n)';    
+    
+    n_term = ((-1).^n)';  
+    
+    
     k = C.*n_term'.*exp(-beta * tau2);
     area = tE * (k' * M); % eq5
     
-    area_uncert = sqrt((sigma_n)^2 *tE * ((tE * k')*k)); % eq6
-    kernel = (C./gamma).*tanh(alpha*gamma);
+    
+    area_uncert = sigma_n^2 * k'*k;
+    %area_uncert = sqrt((sigma_n)^2 *tE * ((tE * k')*k)); % eq6
+    %kernel = (C./gamma).*tanh(alpha*gamma);
 end
 
 % Calculate the kernel used to compute the tapered area in the T2 domain.
@@ -204,12 +241,63 @@ function [kern] = exponetialHaarTransformKernel(Tc, T2)
     alpha = 1.572*Tc;
     beta = 0.4087 / Tc;
     gamma = 1./T2 + beta;
-    kern = (C./gamma).*tanh(alpha*gamma);
+    kern = (C.*T2).*tanh(alpha./T2);
 end
 
 
 
+function c_new = newton_search(M, alpha, c_old, m) %method for finding approx inverse 
+    c = 100*c_old;
+    lambda = 1000;
+    indx = 1;
+    c_func_diff = (M + alpha*eye(length(m))) * c - m;
+    while norm(c_func_diff) / norm(m) > 1e-6
+        c_func_diff = (M + alpha*eye(length(m))) * c - m;
+        c_func_2nd_diff = M + alpha*eye(length(m))  ;
 
+        grad = inv(M + alpha*eye(length(m))) * c_func_diff;
+        s = (grad'*c_func_diff) / ...
+            ( pinv(grad) * c_func_2nd_diff * grad);
+        
+        s = 1;
+        
+        indx = 1;
+        gamma = 0.5;
+        
+        cond_bool = 0;
+        indx = 1;
+        while (cond_bool == 0)
+                    
+            c_next = c - 0.5^indx * s * grad;
+            
+            c_func = .5 * pinv(c) * (M + alpha*eye(length(m))) * c - c' * m;
+            c_func_next = .5 * pinv(c_next) * (M + alpha*eye(length(m))) * c_next - c_next' * m;
+            
+            
+            c_func_diff_next = (M + alpha*eye(length(m))) * c_next - m;
+            
+            
+            % setting the next c
+            c_func_is_next_good = c_func_next - c_func;
+            
+            c_func_grad_increase = c_func_diff' * c_func_diff_next;
+            
+            
+            if(c_func_next < c_func) 
+                cond_bool = 1;
+            end
+            if (c_func_diff' * c_func_diff_next > 0)
+                cond_bool = 1;
+            end
+            
+            indx = indx + 1;
+        end
+        c = c_next;
+      norm(c_func_diff -m) / norm(m); 
+    end
+    c_new = c;
+
+end
 
 % Compress the measured data to a set number of singular values. This
 % involves extracting the largest singular values that make up the inherent
@@ -264,26 +352,27 @@ end
 %    f_est = the estimated density function
 % 
 function f_est = optimisationInverseTransform(G, L, W, n_sigma)
-    alpha = 1000;
+    alpha =1e6;
         
     G = W*G;
-    
+    %{
     figure(44)
     clf
     plot(abs(G))
-    
+    %}
+    %{
     figure(22)
     clf
     hold on
     set(gca, 'XScale', 'log') 
-    ylim([0 0.05])
-    
+    %}
     L_normal = L;
     L = W*L;  
     
     N = nnz(W);
-    N = sum(diag(W)>1e-1);
-
+    %N = sum(diag(W)>1e-1);
+    %N = 25;
+    
     c = ones([length(G)  1]);
     
     f_est = c;
@@ -300,13 +389,16 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
             end
             L_square = L_square .* h;     %recreate eq 30       
             %made symmetric and semi-positive definite
-            c = inv(L_square + alpha*eye(length(G))); %eq 29
-            c = c'*G;
-            alpha = 1*n_sigma *sqrt(N)/ norm(c);
+            %c = inv(L_square + alpha*eye(length(G))); %eq 29
+            %c = c'*G;
+            c = newton_search(L_square, alpha, c, G);
+            alpha = n_sigma *sqrt(N)/ norm(c);
+            
+            
             figure(22)
             plot(max(L'*c,0))
             set(gca, 'XScale', 'log') 
-            pause(0.1)
+            pause(0.01)
             
             %alpha = 14;
             indx = indx + 1;
@@ -327,6 +419,96 @@ end
 
 
 
+
+function [estimate, compute_time, f_est] = iltx_inversion_multiple(G, L, W, n_sigma, T2)
+    tic;
+
+    Ny = length(T2);
+    G = W*G;
+    
+    L_normal = L;
+    L = W*L;  
+    
+    %N = nnz(W);
+    %N = sum(diag(W)>1e-1);
+    N = 25;
+    
+    c = ones([length(G)  1]);
+    
+    f_est = c;
+    %this is the method that prevents it being divergent
+    start_alpha = [0.1 1 10 100 1000]
+    alpha_indx = 1;  
+    
+    f_est = zeros(Ny,length(start_alpha)) 
+    
+    for alpha = start_alpha
+        indx = 0;   
+        while indx < 30
+            L_square = L* L';      
+            h = heaviside(L_square);
+            if h == 0.5
+                h =0;
+            end
+            L_square = L_square .* h;     %recreate eq 30       
+            %made symmetric and semi-positive definite
+            c = inv(L_square + alpha*eye(length(G))); %eq 29
+            c = c'*G;
+            
+            alpha = n_sigma *sqrt(N)/ norm(c);
+            indx = indx + 1;
+        end
+        hold off
+        f_est_inst = max(L'*c,0);
+        f_est_inst = f_est_inst - min(f_est_inst);
+        f_est(:,alpha_indx) = f_est_inst; 
+        
+        alpha_indx = alpha_indx + 1;
+    end
+    
+    figure(33)
+    hold on
+    p2 = plot(T2, f_est)
+    p2(1).LineWidth = 1.5
+    p2(1).LineStyle = '-.'
+    p2(2).LineWidth = 1.5
+    p2(2).LineStyle = '--'
+    p2(3).LineWidth = 1.5
+    p2(3).LineStyle = ':'
+    p2(4).LineWidth = 1.5
+    p2(4).LineStyle = '-.'    
+    p2(5).LineWidth = 1.5
+    p2(5).LineStyle = '--'    
+    hold off
+    xlabel('$T_2$')
+    ylabel('$f_{est}$')
+    set(gca, 'XScale', 'log') 
+    lgnd = legend('True', ...
+        '$\alpha_\textrm{start} = 0.1$', '$\alpha_\textrm{start} = 1$',...
+        '$\alpha_\textrm{start} = 10$', ...
+        '$\alpha_\textrm{start} = 100$', '$\alpha_\textrm{start} = 1000$')
+    lgnd.Interpreter = 'latex'
+    ylim([0 0.02])
+    
+    compute_time = toc;
+    
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 % Discretised Mellin transform. Assumes that m is discretised along tE
 % sample interval (adapted from paper Mellin Transform Venk. 2010)
 % INPUTS: 
@@ -339,7 +521,7 @@ end
 %    variance of T2 moment
 
 function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
-        N = length(m);
+       N = length(m);
        moment = 0;
        var = 0;
         
@@ -384,7 +566,9 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
             (delta*m);
             %disp('1/gamma(omg + 1)');
             1/(gamma(omega + 1)*poro);
-            moment = 1;
+            moment = 0.05;
+            var = 0.0005; %disregard
+            return;
         end
            
         
@@ -417,10 +601,10 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
          hold off
 %}
         %estimate 1st derivate of M at 0 with polyfit
-        coeffc = polyfit(1:100, m(1:100)', 1);
+        coeffc = polyfit(1:30, m(1:30)', 1);
         a1 = (coeffc(1))/(tE);
-        m_est = coeffc(1).*(1:100) + coeffc(2);
-        a1_stddev = std(abs(m(1:100) - m_est')); %standard deviation of slope
+        m_est = coeffc(1).*(1:30) + coeffc(2);
+        a1_stddev = std(abs(m(1:30) - m_est')); %standard deviation of slope
         
         %a1 = -1;
         
@@ -440,13 +624,18 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         %}
         if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
-            moment = 1;
+            moment = 0.05;
+            var = 0.01; %disregard
+            return;
         end
+        
+        moment = moment;
         
         
         var = (((delta.^2)*(delta.^2)')/(gamma(omega+1))^2)*(sigma_n/poro)^2 + var;
         var= var + (moment - k)^2*(sigma_p/poro)^2;
         var = var + ((omega*tau_min^((omega+1)/omega))/gamma(omega + 2)) * (a1_stddev / poro)^2;
+
         return;
     else %allows outside case, shouldn't be called
         moment = 0;

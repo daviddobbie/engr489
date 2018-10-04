@@ -13,8 +13,8 @@ set(0,'defaultAxesFontSize',14)
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1.1)
 
 
-N2 = 3000; % number of data points in each dimension
-Ny = 30; % number of bins in relaxation time grids
+N2 = 1800; % number of data points in each dimension
+Ny = 60; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
 tE = 200e-6;  % sample interval
 %T2 = logspace(log10(2*tE),log10(tE * (N2)),Ny); %form T2 domain, use log since will be small
@@ -29,9 +29,9 @@ K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
 % loaded data from Gruber 2013 
 
-model1_true_raw = csvread('validator_models/model2_true.csv');
-model1_estilt_raw = csvread('validator_models/model2_estILT.csv');
-model1_estiltx_raw = csvread('validator_models/model2_estILT+.csv');
+model1_true_raw = csvread('validator_models/model3_true.csv');
+model1_estilt_raw = csvread('validator_models/model3_estILT.csv');
+model1_estiltx_raw = csvread('validator_models/model3_estILT+.csv');
 model1_true = interp1(model1_true_raw(:,1), model1_true_raw(:,2), T2, 'pchip',0)';
 model1_estilt_ans = interp1(model1_estilt_raw(:,1), model1_estilt_raw(:,2), T2, 'pchip',0)';
 model1_estiltx_ans = interp1(model1_estiltx_raw(:,1), model1_estiltx_raw(:,2), T2, 'pchip',0)';
@@ -287,7 +287,7 @@ xlabel('$T_2$')
 
 subplot(2,1,2)
 hold on
-p3 = plot(T2,model1_estiltx - min(model1_estiltx));
+p3 = plot(T2,model1_estiltx);
 p3.LineStyle = '--'
 p3.LineWidth = 2;
 hold off

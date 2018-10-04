@@ -29,14 +29,14 @@ loadedExperimental = load('testing_data\T2Distributions.mat');
 T2_dist_cells = loadedExperimental.T2_distribution;
 extractedT2Data = cell2mat(T2_dist_cells);
 experimentalfT2 = extractedT2Data(:,2:2:end);
-experimentalT2Axis = extractedT2Data(:,1); %assuming all have the same T2 axes spacing
+experimentalT2Axis = extractedT2Data(:,1)/1000; %assuming all have the same T2 axes spacing
 
 
-N2 = 1000; % number of data points in each dimension
+N2 = 5000; % number of data points in each dimension
 Ny = 30; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
-tE = 500e-6;  % sample interval
-T2 = logspace(log10(tE),4,Ny); %form T2 domain, use log since will be small
+tE = 200e-6;  % sample interval
+T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  %forms measurement arrays, time tau2 domains
 K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
@@ -68,7 +68,7 @@ set(gca, 'XScale', 'log')
 
 
 
-SNR_lin = 5;
+SNR = 0.1;
 
 %% Step 1: Generate the Bound Fluid Integrals
 
@@ -78,9 +78,15 @@ RMSE_all = zeros(length(T2),5);
 
 for Tc_index = 1:length(T2)
     
+%for Tc_index = 10    
+    %Tc = 90e-3    
+    %Tc = T2(Tc_index);
+    Tc = 33e-3;
     
-    Tc = T2(Tc_index)
-    Tc_index
+    Tc_index;
+
+    
+
     bfv_sharp = zeros(Ny ,1);
     for idx = 1:Ny
         if T2(idx)<Tc
@@ -107,15 +113,17 @@ for Tc_index = 1:length(T2)
     for test_indx = 1:test_count
         test_indx
         for indx = 1:tot_Prior %for each prior density function
-
+            indx
             % the one out answer that is being estimated
             answer_oneOut = interpol_exp_fT2(:,indx);
             prior = interpol_exp_fT2;
             prior(:,indx) = [];
 
             % this is valid a noise is known
-            n_sigma =  trapz(answer_oneOut)./SNR_lin;
-
+            %n_sigma =  trapz(answer_oneOut)./SNR_lin;
+            
+            signal_power = sum((K2*answer_oneOut).^2) / N2;
+            n_sigma = sqrt(signal_power/SNR);
 
             noise = n_sigma*normrnd(0, 1, [N2 ,1]); %assumes AWGN
             m = K2*answer_oneOut + noise; % generates simulated data
@@ -155,13 +163,32 @@ for Tc_index = 1:length(T2)
     cdfplot(bff_est_ilt_error);
     cdfplot(bff_est_iltx_error);
     cdfplot(bff_est_eht_error);
+    title('')
     legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT est.', ...
         'ILT+ est.', 'EHT est.','location','SouthEast')
     xlabel('BFF Absolute Error')
+    ylabel('Prob(Error \textless  X)')
     xlim([0 1])
     hold off
 
-
+    figure(3)
+    clf
+    subplot(2,2,1)
+    hist(bff_est_bayes_sharp_error);
+    legend('Bayes Sharp BFV')
+    xlim([0 1])    
+    subplot(2,2,2)    
+    hist(bff_est_ilt_error);
+    legend('ILT est.')
+    xlim([0 1])
+    subplot(2,2,3)     
+    hist(bff_est_iltx_error);
+    legend('ILT+ est')
+    xlim([0 1])
+    subplot(2,2,4)        
+    hist(bff_est_eht_error);
+    legend('EHT est.')
+    xlim([0 1])
 
 
     %root mean squared error

@@ -34,7 +34,7 @@ function [estimate compute_time] = tapered_area(Tc, m, n_sigma,...
     %       method described in paper 2. It mentions in practice that
     %       simply using TSE estimation is 'reasonable' (pg 23)
     
-    [tse_porosity] = polyfit(1:50, m(1:50)', 1);
+    [tse_porosity] = polyfit(1:30, m(1:30)', 1);
     porosity = tse_porosity(2);
     estimate = estimate_tapered_area/porosity;
     
