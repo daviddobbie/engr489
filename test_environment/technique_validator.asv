@@ -13,8 +13,8 @@ set(0,'defaultAxesFontSize',14)
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1.1)
 
 
-N2 = 1800; % number of data points in each dimension
-Ny = 60; % number of bins in relaxation time grids
+N2 = 3000; % number of data points in each dimension
+Ny = 30; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
 tE = 200e-6;  % sample interval
 %T2 = logspace(log10(2*tE),log10(tE * (N2)),Ny); %form T2 domain, use log since will be small
@@ -29,9 +29,9 @@ K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
 % loaded data from Gruber 2013 
 
-model1_true_raw = csvread('validator_models/model3_true.csv');
-model1_estilt_raw = csvread('validator_models/model3_estILT.csv');
-model1_estiltx_raw = csvread('validator_models/model3_estILT+.csv');
+model1_true_raw = csvread('validator_models/model2_true.csv');
+model1_estilt_raw = csvread('validator_models/model2_estILT.csv');
+model1_estiltx_raw = csvread('validator_models/model2_estILT+.csv');
 model1_true = interp1(model1_true_raw(:,1), model1_true_raw(:,2), T2, 'pchip',0)';
 model1_estilt_ans = interp1(model1_estilt_raw(:,1), model1_estilt_raw(:,2), T2, 'pchip',0)';
 model1_estiltx_ans = interp1(model1_estiltx_raw(:,1), model1_estiltx_raw(:,2), T2, 'pchip',0)';
@@ -108,7 +108,7 @@ ylim([0 plot_y_limit])
 
 bfv_tapered = zeros(Ny,1);
 
-num_results =20;
+num_results =10;
 
 model1_estiltx_results = zeros(Ny, num_results);
 model1_estilt_results = zeros(Ny, num_results);
@@ -127,7 +127,7 @@ ylim([0 plot_y_limit])
 omega = linspace(-0.5,1,12);
 T_cutoff = [0.01 0.1 1];
     
-moment_actual = plot_actual_omega(model1_true, T2, omega);
+[moment_actual, mom_kern] = plot_actual_omega(model1_true, T2, omega);
 
 actual_tapered_area = plot_actual_tapered_area(model1_true, T2, T_cutoff);
 
@@ -188,7 +188,7 @@ for indx = 1:num_results
         , K2, n_sigma, T2, tE);  
     
        [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, ...
-    m, K2, n_sigma, T2, tE, tau2, moment_actual);  
+    m, K2, n_sigma, T2, tE, tau2, moment_actual, mom_kern);  
     
     %{
         figure(2)
@@ -287,7 +287,7 @@ xlabel('$T_2$')
 
 subplot(2,1,2)
 hold on
-p3 = plot(T2,model1_estiltx);
+p3 = plot(T2,model1_estiltx - min(model1_estiltx));
 p3.LineStyle = '--'
 p3.LineWidth = 2;
 hold off
@@ -328,7 +328,7 @@ legend('Actual ILT+ Result','Own ILT+ Result')
 
 
 
-function actual_mom = plot_actual_omega(f, T2, omega)
+function [actual_mom momentKern] = plot_actual_omega(f, T2, omega)
 
 
     momentKern = ones(size(omega,2), length(f));
@@ -342,6 +342,8 @@ function actual_mom = plot_actual_omega(f, T2, omega)
     end
     
     actual_mom = momentKern * f;
+    
+    matlab_mom = moment(f, [1 2])
     
     figure(55)
     clf

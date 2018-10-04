@@ -9,7 +9,7 @@
 % F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 95-103
 
 function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,...
-    T2, tE, tau2, moment_true)
+    T2, tE, tau2, moment_true, moment_kern_true)
 
     tic
     
@@ -72,7 +72,6 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
         
         indx = indx + 1;
     end
-
     momentVect;
 
     % weighting measurements with short pulse increased SNR
@@ -98,34 +97,37 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     G_opt = [m_comp'; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    %W_vect = [1*(ones(size(m_comp')))/n_sigma; 0./momentVect(:,2) ; ...
-     %   0./tpdAreasVect(:,2)];
-     
-
-
-     %W_vect = [ones(size(m_comp'));  min(1*n_sigma./(momentVect(:,2).^2), 10); ...
+    %L_opt = [k_comp ; moment_kern_true ; tpdAreaKern]; % eq 14 pap 4
+    
+    %W_vect = [ones(size(m_comp'));  min(1*n_sigma./(momentVect(:,2).^2), 10); ...
      %0*n_sigma./(tpdAreasVect(:,2))]  ;
  
  
  
-     %W_vect = [ones(size(m_comp'))/n_sigma;  1*ones(size(momentVect(:,2))),; ...
-     %1*n_sigma./(tpdAreasVect(:,2))]  ;
+
+
  
+     %W_vect = [0*ones(size(m_comp'))/n_sigma;  ones(size(momentVect(:,2)))/n_sigma,; ...
+     %0*n_sigma./(tpdAreasVect(:,2))]  ; 
  
-      W_vect = [1*ones(size(m_comp'))/n_sigma;  0./(momentVect(:,2)); ...
+     %W_vect = [1*ones(size(m_comp'))/n_sigma;  min(1./(momentVect(:,2)),1e4); ...
+     %0*n_sigma./(tpdAreasVect(:,2))]  ;
+ 
+    moment_mean_only = zeros(size(momentVect(:,2)));
+    moment_mean_only(12) = 1;
+    
+    
+      W_vect = [0*ones(size(m_comp'))/n_sigma;  moment_mean_only; ...
+     0./(tpdAreasVect(:,2))]  ;
+ 
+       W_vect = [1*ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)); ...
      1./(tpdAreasVect(:,2))]  ;
  
-    W_vect =0.2* W_vect;
-  
-    %W_vect = 0.1*W_vect * length(W_vect) / norm(W_vect) % change relative weighting, no effect on regularisation
-     %W_vect = [0*ones(size(m_comp'));  1*n_sigma./(momentVect(:,2)); ...
-     %   0*n_sigma./(tpdAreasVect(:,2))]  ;  
+       W_vect = [1*ones(size(m_comp'))/n_sigma;  0.01*1*(1./(momentVect(:,2))); ...
+     1*1*(1./(tpdAreasVect(:,2)))]  ; 
+ 
+    W_vect = 1*nnz(W_vect) * W_vect / norm(W_vect,1);
 
-
-    %n_sigma = n_sigma * (1/2)
-    %n_sigma = n_sigma * sqrt(1/3)   
-   
-   %n_sigma = n_sigma*mean(1./find(W_vect))
    
    
    figure(55)
@@ -154,7 +156,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     
     
-    W_vect;
+    W_vect
     
     W_opt = W_vect .* eye(size(G_opt,1));   
      
@@ -162,9 +164,9 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     
     
-    n_sigma_avg = mean(1./W_vect);
+    %n_sigma_avg = mean(1./W_vect);
     n_sigma_avg = n_sigma;
-    n_sigma_avg = 0.1;
+    %n_sigma_avg = 0.1;
     
     f_est = optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
     
@@ -389,9 +391,9 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
             end
             L_square = L_square .* h;     %recreate eq 30       
             %made symmetric and semi-positive definite
-            %c = inv(L_square + alpha*eye(length(G))); %eq 29
-            %c = c'*G;
-            c = newton_search(L_square, alpha, c, G);
+            c = inv(L_square + alpha*eye(length(G))); %eq 29
+            c = c'*G;
+            %c = newton_search(L_square, alpha, c, G);
             alpha = n_sigma *sqrt(N)/ norm(c);
             
             
@@ -566,8 +568,8 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
             (delta*m);
             %disp('1/gamma(omg + 1)');
             1/(gamma(omega + 1)*poro);
-            moment = 0.05;
-            var = 0.0005; %disregard
+            moment = 33e-3;
+            var = 1e-4; %disregard
             return;
         end
            
@@ -625,7 +627,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
             moment = 0.05;
-            var = 0.01; %disregard
+            var = 0.1; %disregard
             return;
         end
         

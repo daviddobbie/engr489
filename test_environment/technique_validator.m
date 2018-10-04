@@ -17,7 +17,7 @@ N2 = 3000; % number of data points in each dimension
 Ny = 30; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
 tE = 200e-6;  % sample interval
-%T2 = logspace(log10(2*tE),log10(tE * (N2)),Ny); %form T2 domain, use log since will be small
+T2 = logspace(log10(2*tE),log10(tE * (N2)),Ny); %form T2 domain, use log since will be small
 T2 = logspace(log10(2*tE),log10(3),Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  %forms measurement arrays, time tau2 domains
 K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
@@ -29,9 +29,9 @@ K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
 % loaded data from Gruber 2013 
 
-model1_true_raw = csvread('validator_models/model2_true.csv');
-model1_estilt_raw = csvread('validator_models/model2_estILT.csv');
-model1_estiltx_raw = csvread('validator_models/model2_estILT+.csv');
+model1_true_raw = csvread('validator_models/model1_true.csv');
+model1_estilt_raw = csvread('validator_models/model1_estILT.csv');
+model1_estiltx_raw = csvread('validator_models/model1_estILT+.csv');
 model1_true = interp1(model1_true_raw(:,1), model1_true_raw(:,2), T2, 'pchip',0)';
 model1_estilt_ans = interp1(model1_estilt_raw(:,1), model1_estilt_raw(:,2), T2, 'pchip',0)';
 model1_estiltx_ans = interp1(model1_estiltx_raw(:,1), model1_estiltx_raw(:,2), T2, 'pchip',0)';
@@ -108,7 +108,7 @@ ylim([0 plot_y_limit])
 
 bfv_tapered = zeros(Ny,1);
 
-num_results =20;
+num_results =10;
 
 model1_estiltx_results = zeros(Ny, num_results);
 model1_estilt_results = zeros(Ny, num_results);
@@ -124,10 +124,10 @@ xlim([1e-4 10])
 ylim([0 plot_y_limit])
       
 
-omega = linspace(-0.5,1,12);
+omega = linspace(0.1,1,12);
 T_cutoff = [0.01 0.1 1];
     
-moment_actual = plot_actual_omega(model1_true, T2, omega);
+[moment_actual, mom_kern] = plot_actual_omega(model1_true, T2, omega);
 
 actual_tapered_area = plot_actual_tapered_area(model1_true, T2, T_cutoff);
 
@@ -188,7 +188,7 @@ for indx = 1:num_results
         , K2, n_sigma, T2, tE);  
     
        [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, ...
-    m, K2, n_sigma, T2, tE, tau2, moment_actual);  
+    m, K2, n_sigma, T2, tE, tau2, moment_actual, mom_kern);  
     
     %{
         figure(2)
@@ -328,20 +328,33 @@ legend('Actual ILT+ Result','Own ILT+ Result')
 
 
 
-function actual_mom = plot_actual_omega(f, T2, omega)
+function [actual_mom momentKern] = plot_actual_omega(f, T2, omega)
 
 
     momentKern = ones(size(omega,2), length(f));
-
+    moment_matlab = ones(size(omega,2),1);
+    
+%     figure(44)
+%     clf
+    
     poro = trapz(f); 
     indx = 1;
     for w = omega
         kern = (T2.^(w))/poro;
+        %{
+        figure(44)
+        pause(0.05)
+        plot(T2, kern)
+        set(gca, 'XScale', 'log') 
+        %}
         momentKern(indx,:) = kern;    
+        moment_matlab(indx) = abs(moment(f, w))
+        
         indx = indx +1;
     end
     
     actual_mom = momentKern * f;
+
     
     figure(55)
     clf
@@ -349,9 +362,10 @@ function actual_mom = plot_actual_omega(f, T2, omega)
     hold on
     p3 = plot(omega, actual_mom, 'b--');
     p3.LineWidth = 2;
+    p4 = plot(omega,moment_matlab, '--')
+    p4.LineWidth = 2;
     subplot(2,1,2)
     xlabel('$\omega$')
-    
     
     
 end
@@ -364,7 +378,8 @@ function plot_overall_est_omega(f, T2, omega)
     indx = 1;
     for w = omega
         kern = (T2.^(w))/poro;
-        momentKern(indx,:) = kern;    
+        momentKern(indx,:) = kern;   
+        
         indx = indx +1;
     end
     
@@ -384,7 +399,9 @@ end
 
 function actual_tapered_area = plot_actual_tapered_area(f, T2, T_cutoff)
 
-
+    figure(44)
+    clf 
+    
     taperedKern = ones(size(T_cutoff,2), length(f));
     indx = 1;
     for Tc = T_cutoff
@@ -394,7 +411,14 @@ function actual_tapered_area = plot_actual_tapered_area(f, T2, T_cutoff)
         gamma = 1./T2 + beta;
         kern = (C./gamma).*tanh(alpha*gamma);
         taperedKern(indx,:) = kern;
-        indx = indx +1;       
+        indx = indx +1;    
+        
+        figure(44)
+        pause(0.05)
+        plot(T2, taperedKern)
+        set(gca, 'XScale', 'log') 
+        
+        
     end
     
     actual_area = taperedKern * f;
