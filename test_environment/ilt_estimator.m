@@ -8,7 +8,7 @@
 % by
 % Venkataramanan et al
 
-function [estimate, compute_time, f_est] = ilt_estimator(g_bfv, m, K, n_sigma,...
+function [estimate, compute_time, f_est, estimate_bfv] = ilt_estimator(g_bfv, m, K, n_sigma,...
     T2, tE)
     tic;
 
@@ -54,7 +54,7 @@ function [estimate, compute_time, f_est] = ilt_estimator(g_bfv, m, K, n_sigma,..
         %alpha = 14;
         indx = indx + 1;
     end
-    alpha
+    alpha;
     hold off
     f_est = max(0, k_comp'*c);
     

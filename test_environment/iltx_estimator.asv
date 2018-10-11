@@ -8,8 +8,8 @@
 % by
 % F. K. Gruber et al / Journal of Magnetic Resonance 228 (2013) 95-103
 
-function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,...
-    T2, tE, tau2, moment_true)
+function [estimate, compute_time ,f_est, estimate_bfv] = iltx_estimator(g_bfv, m, K, n_sigma,...
+    T2, tE, tau2, moment_true, moment_kern_true)
 
     tic
     
@@ -72,9 +72,10 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
         
         indx = indx + 1;
     end
-
     momentVect;
 
+    %momentKern(:,15:30) = 0.02; % remove for long relaxation
+    
     % weighting measurements with short pulse increased SNR
     
     
@@ -88,9 +89,14 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     %K_weighted_for_short_pulse = K;
     
     % create compressed m vector of values for optimisation
+    [m_comp, k_comp] = compressData(m, ...,
+        K,10);
+
     [m_comp, k_comp] = compressData(m_weighted_for_short_pulse, ...,
         K_weighted_for_short_pulse,10);
 
+    
+    
     m_comp = m_comp'; % compressed m vector
 
 
@@ -98,36 +104,60 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     G_opt = [m_comp'; momentVect(:,1) ; tpdAreasVect(:,1)]; %eq 13 pap4
     
     L_opt = [k_comp ; momentKern ; tpdAreaKern]; % eq 14 pap 4
-    %W_vect = [1*(ones(size(m_comp')))/n_sigma; 0./momentVect(:,2) ; ...
-     %   0./tpdAreasVect(:,2)];
-     
-
-
-     %W_vect = [ones(size(m_comp'));  min(1*n_sigma./(momentVect(:,2).^2), 10); ...
+    %L_opt = [k_comp ; moment_kern_true ; tpdAreaKern]; % eq 14 pap 4
+    
+    %W_vect = [ones(size(m_comp'));  min(1*n_sigma./(momentVect(:,2).^2), 10); ...
      %0*n_sigma./(tpdAreasVect(:,2))]  ;
  
  
  
-     W_vect = [ones(size(m_comp'))/n_sigma;  1000*ones(size(momentVect(:,2))),; ...
-     0*n_sigma./(tpdAreasVect(:,2))]  ;
- 
- 
-      W_vect = [1*ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)),; ...
-     1./(tpdAreasVect(:,2))]  ;
- 
- 
-    W_vect = W_vect*.2
-  
-    W_vect = 10*W_vect * length(W_vect) / norm(W_vect) % change relative weighting, no effect on regularisation
-     %W_vect = [0*ones(size(m_comp'));  1*n_sigma./(momentVect(:,2)); ...
-     %   0*n_sigma./(tpdAreasVect(:,2))]  ;  
 
 
-    %n_sigma = n_sigma * (1/2)
-    %n_sigma = n_sigma * sqrt(1/3)   
-   
-   %n_sigma = n_sigma*mean(1./find(W_vect))
-   
+ 
+     %W_vect = [0*ones(size(m_comp'))/n_sigma;  ones(size(momentVect(:,2)))/n_sigma,; ...
+     %0*n_sigma./(tpdAreasVect(:,2))]  ; 
+ 
+     %W_vect = [1*ones(size(m_comp'))/n_sigma;  min(1./(momentVect(:,2)),1e4); ...
+     %0*n_sigma./(tpdAreasVect(:,2))]  ;
+ 
+    %moment_mean_only = zeros(size(momentVect(:,2)));
+    %moment_mean_only(12) = 1;
+    
+    
+%       W_vect = [0*ones(size(m_comp'))/n_sigma;  moment_mean_only; ...
+%      0./(tpdAreasVect(:,2))]  ;
+ 
+      % W_vect = [1*ones(size(m_comp'))/n_sigma;  1./(momentVect(:,2)); ...
+     %1./(tpdAreasVect(:,2))];
+ 
+     %  W_vect = [1*ones(size(m_comp'))/n_sigma;  (0./(momentVect(:,2))); ...
+     %0*(1./(tpdAreasVect(:,2)))]; 
+    W_vect = [1*ones(size(m_comp'))/n_sigma;  (0./(momentVect(:,2))); ...
+     1*(1./(tpdAreasVect(:,2)))]; 
+ 
+     W_vect = [1*ones(size(m_comp'));  (1*n_sigma./(momentVect(:,2))); ...
+     (n_sigma./(tpdAreasVect(:,2)))]; 
+ 
+ 
+    mask = ones(25,1);
+    %mask(12:19) = 0;
+    
+    %mask(11:22) = 0;
+    
+    %{
+    mask(13) = 0.1;
+    mask(16:18) = 0.1;  
+    mask(12:13) = 0.1;
+    mask(15) = 0.1;
+    mask(19) = 0.1;
+    %}
+   % mask = ones(25,1);    
+    
+    W_vect = W_vect .* mask;   
+ 
+    %W_vect = 1*nnz(W_vect) * W_vect / norm(W_vect,1);
+
+
    
    figure(55)
    subplot(2,1,1)
@@ -149,13 +179,9 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
    plot(T_cutoff, 1./tpdAreasVect(:,2))
    hold off
    
+
+    
    
-    %W_vect = [1*(ones(size(m_comp'))); 0./momentVect(:,2) ; ...
-     % ones(length(tpdAreasVect),1)/2];
-    
-    
-    
-    W_vect;
     
     W_opt = W_vect .* eye(size(G_opt,1));   
      
@@ -163,9 +189,9 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
     
     
-    n_sigma_avg = mean(1./W_vect);
+    %n_sigma_avg = mean(1./W_vect);
     n_sigma_avg = n_sigma;
-    n_sigma_avg = 0.1;
+    %n_sigma_avg = 0.1;
     
     f_est = optimisationInverseTransform(G_opt, L_opt, W_opt, n_sigma_avg);
     
@@ -173,7 +199,7 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
     
    %iltx_inversion_multiple(G_opt, L_opt, W_opt, n_sigma_avg, T2)
 
-    
+    %f_est(24:30) = 0;
     
     %est_tapered = tpdAreaKern * f_est;
     %scale = tpdAreasVect(1,1)./est_tapered(1);
@@ -183,8 +209,14 @@ function [estimate, compute_time ,f_est] = iltx_estimator(g_bfv, m, K, n_sigma,.
 
     
     estimate_bfv = g_bfv' * f_est;
-    estimate_porosity = g_poro' * f_est;
-    estimate = estimate_bfv / estimate_porosity;
+    
+    
+    
+    %estimate_porosity = g_poro' * f_est
+    
+    
+    
+    estimate = estimate_bfv / porosity;
     
     compute_time = toc;
 end
@@ -385,14 +417,16 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
             alph_past = alpha; 
             L_square = L* L';      
             h = heaviside(L_square);
-            if h == 0.5
-                h =0;
-            end
-            L_square = L_square .* h;     %recreate eq 30       
+            L_square = L_square .* h;     %recreate eq 30
+            
+            
+            L_square = L* L';
+            
+            
             %made symmetric and semi-positive definite
-            %c = inv(L_square + alpha*eye(length(G))); %eq 29
-            %c = c'*G;
-            c = newton_search(L_square, alpha, c, G);
+            c = inv(L_square + alpha*eye(length(G))); %eq 29
+            c = c'*G;
+            %c = newton_search(L_square, alpha, c, G);
             alpha = n_sigma *sqrt(N)/ norm(c);
             
             
@@ -438,7 +472,7 @@ function [estimate, compute_time, f_est] = iltx_inversion_multiple(G, L, W, n_si
     
     f_est = c;
     %this is the method that prevents it being divergent
-    start_alpha = [0.1 1 10 100 1000]
+    start_alpha = [0.1 1 10 100 1000];
     alpha_indx = 1;  
     
     f_est = zeros(Ny,length(start_alpha)) 
@@ -567,8 +601,8 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
             (delta*m);
             %disp('1/gamma(omg + 1)');
             1/(gamma(omega + 1)*poro);
-            moment = 0.05;
-            var = 0.0005; %disregard
+            moment = 33e-3;
+            var = 1e-4; %disregard
             return;
         end
            
@@ -602,10 +636,10 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
          hold off
 %}
         %estimate 1st derivate of M at 0 with polyfit
-        coeffc = polyfit(1:100, m(1:100)', 1);
+        coeffc = polyfit(1:30, m(1:30)', 1);
         a1 = (coeffc(1))/(tE);
-        m_est = coeffc(1).*(1:100) + coeffc(2);
-        a1_stddev = std(abs(m(1:100) - m_est')); %standard deviation of slope
+        m_est = coeffc(1).*(1:30) + coeffc(2);
+        a1_stddev = std(abs(m(1:30) - m_est')); %standard deviation of slope
         
         %a1 = -1;
         
@@ -626,7 +660,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
             moment = 0.05;
-            var = 0.01; %disregard
+            var = 0.1; %disregard
             return;
         end
         

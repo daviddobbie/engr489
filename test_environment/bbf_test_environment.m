@@ -18,7 +18,7 @@ set(0,'defaultTextInterpreter','latex');
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1)
 set(0,'defaultAxesFontSize',14)
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1.1)
-
+set(groot,'defaultLineLineWidth',2)
 
 
 %% Step 0: intialise variables
@@ -32,11 +32,11 @@ experimentalfT2 = extractedT2Data(:,2:2:end);
 experimentalT2Axis = extractedT2Data(:,1)/1000; %assuming all have the same T2 axes spacing
 
 
-N2 = 5000; % number of data points in each dimension
+N2 = 2500; % number of data points in each dimension
 Ny = 30; % number of bins in relaxation time grids
 sing_val=5; %sets how many singular values we compress to
 tE = 200e-6;  % sample interval
-T2 = logspace(log10(2*tE),1,Ny); %form T2 domain, use log since will be small
+T2 = logspace(log10(2*tE),3,Ny); %form T2 domain, use log since will be small
 tau2 = (1:N2)'*tE;  %forms measurement arrays, time tau2 domains
 K2 = exp(-tau2 * (1./T2) ); % simple T2 relaxation kernel
 
@@ -68,7 +68,7 @@ set(gca, 'XScale', 'log')
 
 
 
-SNR = 0.1;
+SNR = 10;
 
 %% Step 1: Generate the Bound Fluid Integrals
 
@@ -79,9 +79,9 @@ RMSE_all = zeros(length(T2),5);
 for Tc_index = 1:length(T2)
     
 %for Tc_index = 10    
-    %Tc = 90e-3    
+    Tc = 90e-3    
     %Tc = T2(Tc_index);
-    Tc = 33e-3;
+    %Tc = 33e-3;
     
     Tc_index;
 
@@ -97,10 +97,25 @@ for Tc_index = 1:length(T2)
     % this function comes from Gruber 2013, the tapered area used.
     bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
 
+    figure(44)
+    clf
+    hold on
+    p1 = plot(T2,bfv_sharp);
+    p1.LineWidth = 2;
+    p2 = plot(T2, bfv_tapered);
+    p2.LineWidth = 2;
+    hold off
+    set(gca, 'XScale', 'log') 
+    grid on
+    legend('BFV Sharp', 'BFV Tapered')
+    xlabel('$T_2$')
+    ylabel('$I(T_2)$')
+    xlim([min(T2) max(T2)])
+    
 
     %% Step 2: Begin Leave One Out Cross Validation
 
-    test_count = 10;
+    test_count = 1;
 
     bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
     bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
@@ -144,11 +159,11 @@ for Tc_index = 1:length(T2)
             bff_actual = bff_answer(answer_oneOut, bfv_sharp);
 
 
-            bff_est_bayes_sharp_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_sharp - bff_actual);
-            bff_est_bayes_tapered_error(test_indx*tot_Prior + indx) = abs(bff_est_bayes_tapered - bff_actual); 
-            bff_est_ilt_error(test_indx*tot_Prior + indx) = abs(bff_est_ilt - bff_actual); 
-            bff_est_iltx_error(test_indx*tot_Prior + indx) = abs(bff_est_iltx - bff_actual); 
-            bff_est_eht_error(test_indx*tot_Prior + indx) = abs(bff_est_eht - bff_actual); 
+            bff_est_bayes_sharp_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp - bff_actual);
+            bff_est_bayes_tapered_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_tapered - bff_actual); 
+            bff_est_ilt_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_ilt - bff_actual); 
+            bff_est_iltx_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_iltx - bff_actual); 
+            bff_est_eht_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_eht - bff_actual); 
         end
 
     end
@@ -158,6 +173,7 @@ for Tc_index = 1:length(T2)
     figure(2)
     clf
     hold on
+    
     cdfplot(bff_est_bayes_sharp_error);
     cdfplot(bff_est_bayes_tapered_error);
     cdfplot(bff_est_ilt_error);
@@ -168,7 +184,7 @@ for Tc_index = 1:length(T2)
         'ILT+ est.', 'EHT est.','location','SouthEast')
     xlabel('BFF Absolute Error')
     ylabel('Prob(Error \textless  X)')
-    xlim([0 1])
+    xlim([0 0.4])
     hold off
 
     figure(3)

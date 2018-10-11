@@ -7,6 +7,7 @@
 clc
 clear
 
+set(groot,'defaultLineLineWidth',2)
 set(0,'defaultTextInterpreter','latex');
 set(0,'DefaultAxesTitleFontSizeMultiplier', 1)
 set(0,'defaultAxesFontSize',14)
@@ -79,11 +80,11 @@ figure(1)
 clf
 subplot(2,1,1)
 hold on
-p1 = plot(T2,model1_true)
+p1 = plot(T2,model1_true);
 p1.LineWidth = 1.5;
-p2 = plot(T2,model1_estilt_ans)
+p2 = plot(T2,model1_estilt_ans);
 p2.LineWidth = 1.5;
-p2.LineStyle = '-.'
+p2.LineStyle = '-.';
 hold off
 set(gca, 'XScale', 'log') 
 xlim([1e-4 10])
@@ -114,6 +115,10 @@ model1_estiltx_results = zeros(Ny, num_results);
 model1_estilt_results = zeros(Ny, num_results);
 model1_estilt_no_short_pulse_results = zeros(Ny, num_results);
 
+bfv_iltx_results = zeros(num_results,1);
+
+bfv_ilt_results = zeros(num_results,1);
+
 %n_sigma = n_sigma * trapz(T2, model1_true)
 figure(2)
 clf
@@ -124,13 +129,24 @@ xlim([1e-4 10])
 ylim([0 plot_y_limit])
       
 
-omega = linspace(0.1,1,12);
+omega = linspace(-0.5,1,12);
 T_cutoff = [0.01 0.1 1];
     
 [moment_actual, mom_kern] = plot_actual_omega(model1_true, T2, omega);
 
 actual_tapered_area = plot_actual_tapered_area(model1_true, T2, T_cutoff);
 
+Tc = 33e-3;
+
+bfv_sharp = zeros(Ny ,1);
+for idx = 1:Ny
+    if T2(idx)<Tc
+        bfv_sharp(idx) = 1;
+    end
+end
+
+
+bfv_sharp'  * model1_estiltx_ans 
 
 
 for indx = 1:num_results
@@ -157,7 +173,7 @@ for indx = 1:num_results
     K_weighted_for_short_pulse = weight_short_pulse .* K2;    
     
     
-    
+    m_weighted_for_short_pulse = m_weighted_for_short_pulse;
     
    %{
     figure(4)
@@ -181,15 +197,17 @@ for indx = 1:num_results
     
     
     %[bff, compute, model1_estilt] = ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);  
-    [bff, compute, model1_estilt] = ilt_estimator(bfv_tapered, m_weighted_for_short_pulse ...
+    [bff, compute, model1_estilt, bfv_ilt] = ilt_estimator(bfv_sharp, m_weighted_for_short_pulse ...
         , K_weighted_for_short_pulse, n_sigma, T2, tE);  
     
-    [bff, compute, model1_estilt_no_short] = ilt_estimator(bfv_tapered, m_noshort_help ...
-        , K2, n_sigma, T2, tE);  
+     %[bff, compute, model1_estilt_no_short] = ilt_estimator(bfv_tapered, m_noshort_help ...
+     %    , K2, n_sigma, T2, tE);  
     
-       [bff, compute, model1_estiltx] = iltx_estimator(bfv_tapered, ...
+       [bff, compute, model1_estiltx,bfv_iltx] = iltx_estimator(bfv_sharp, ...
     m, K2, n_sigma, T2, tE, tau2, moment_actual, mom_kern);  
-    
+
+
+
     %{
         figure(2)
         hold on
@@ -201,12 +219,13 @@ for indx = 1:num_results
 %}
 
         
-    
+    bfv_iltx_results(indx) = bfv_iltx;
+    bfv_ilt_results(indx) = bfv_ilt;
     
     model1_estiltx_results(:,indx) = model1_estiltx;
     model1_estilt_results(:,indx) = model1_estilt;
-    model1_estilt_no_short_pulse_results(:, indx) = model1_estilt_no_short;
-    
+%     model1_estilt_no_short_pulse_results(:, indx) = model1_estilt_no_short;
+%     
 end
 
 
@@ -279,7 +298,7 @@ hold off
 set(gca, 'XScale', 'log') 
 xlim([1e-4 10])
 ylim([0 plot_y_limit])
-lgnd = legend('True','Actual ILT','Reproduced ILT');
+lgnd = legend('True','Published ILT','Reproduced ILT');
 lgnd.Location = 'NorthWest';
 ylabel('$f(T_2)$')
 xlabel('$T_2$')
@@ -294,7 +313,7 @@ hold off
 set(gca, 'XScale', 'log') 
 xlim([1e-4 10])
 ylim([0 plot_y_limit])
-lgnd = legend('True','Actual ILT+','Reproduced ILT+','Location','NorthEast')
+lgnd = legend('True','Published ILT+','Reproduced ILT+','Location','NorthEast')
 lgnd.Location = 'NorthWest';
 ylabel('$f(T_2)$')
 xlabel('$T_2$')
@@ -327,6 +346,17 @@ ylim([0 plot_y_limit])
 legend('Actual ILT+ Result','Own ILT+ Result')
 
 
+figure(4)
+clf
+hold on
+histogram(bfv_iltx_results)
+histogram(bfv_ilt_results)
+hold off
+ylabel('Frequency')
+xlabel('Bound Fluid Volume')
+
+
+hold off
 
 function [actual_mom momentKern] = plot_actual_omega(f, T2, omega)
 
@@ -348,7 +378,7 @@ function [actual_mom momentKern] = plot_actual_omega(f, T2, omega)
         set(gca, 'XScale', 'log') 
         %}
         momentKern(indx,:) = kern;    
-        moment_matlab(indx) = abs(moment(f, w))
+        moment_matlab(indx) = abs(moment(f, w));
         
         indx = indx +1;
     end
