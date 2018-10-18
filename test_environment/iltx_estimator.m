@@ -89,11 +89,12 @@ function [estimate, compute_time ,f_est, estimate_bfv] = iltx_estimator(g_bfv, m
     %K_weighted_for_short_pulse = K;
     
     % create compressed m vector of values for optimisation
-    [m_comp, k_comp] = compressData(m, ...,
-        K,10);
+    % this for reproduction of Gruber et al 10 short pulses
+    %[m_comp, k_comp] = compressData(m, ...,
+    %    K,10);
 
-%     [m_comp, k_comp] = compressData(m_weighted_for_short_pulse, ...,
-%         K_weighted_for_short_pulse,10);
+     [m_comp, k_comp] = compressData(m_weighted_for_short_pulse, ...,
+        K_weighted_for_short_pulse,10);
 
     
     
@@ -132,11 +133,13 @@ function [estimate, compute_time ,f_est, estimate_bfv] = iltx_estimator(g_bfv, m
  
      %  W_vect = [1*ones(size(m_comp'))/n_sigma;  (0./(momentVect(:,2))); ...
      %0*(1./(tpdAreasVect(:,2)))]; 
-    W_vect = [1*ones(size(m_comp'))/n_sigma;  (0./(momentVect(:,2))); ...
-     1*(1./(tpdAreasVect(:,2)))]; 
+    W_vect_old = [1*ones(size(m_comp'));  (n_sigma./(momentVect(:,2))); ...
+     1*(n_sigma./(tpdAreasVect(:,2)))]; 
  
      W_vect = [1*ones(size(m_comp'));  (0.1*n_sigma./(momentVect(:,2))); ...
      (1*n_sigma./(tpdAreasVect(:,2)))]; 
+ 
+ 
  
  
     mask = ones(25,1);
@@ -153,21 +156,89 @@ function [estimate, compute_time ,f_est, estimate_bfv] = iltx_estimator(g_bfv, m
     %}
    % mask = ones(25,1);    
     
-    W_vect = 1.25*W_vect .* mask;   
+    W_vect = 1*W_vect .* mask;   
  
     %W_vect = 1*nnz(W_vect) * W_vect / norm(W_vect,1);
 
-
-   
-   figure(55)
-   subplot(2,1,1)
+%{
+   figure(43)
+   clf
    hold on
-   plot(omega, momentVect(:,1))
+   
+   p1 = plot(W_vect_old)
+   p1.Marker = 'o'
+   
+   p2 =plot(W_vect)
+   p2.LineWidth = 4;
+   p2.LineStyle = ':'
+   p2.Marker = 'x'
+   
+   p3 = plot([10.5 10.5], [0 2.5])
+   p3.LineStyle = '--'
+   p3.Color = [0 0 0]   
+   
+   p4 = plot([22.5 22.5], [0 2.5])
+   p4.LineStyle = '--'   
+   p4.Color = [0 0 0]
+   
+    str_m = 'Measurement $m$';
+    str_w = 'Moment $\omega$';
+    str_b = 'Area $B$';
+    
+    
+   a1 = annotation('textbox','String', str_m);
+   a1.Interpreter = 'latex'
+   a1.LineStyle='none'
+   a1.FontSize = 14
+  
+   a2 = annotation('textbox','String', str_w);
+   a2.Interpreter = 'latex'
+   a2.LineStyle='none'  
+   a2.FontSize = 14  
+   
+   a3 = annotation('textbox','String', str_b);  
+   a3.Interpreter = 'latex'
+   a3.LineStyle='none'   
+   a3.FontSize = 14
+   ylabel('Weight $\frac{1}{\sigma}$')
+   xlabel('Weight Vector Indices')
+   
+   
+   legend('Original','Re-scaled','Location','NorthWest')
+   
+   xlim([1 25])
    hold off
-   subplot(2,1,2)   
+   grid on
+   
+
+    
+    
+    
+   figure(59)
+   clf
+
+   hold on
+   plot(omega, abs(momentVect(:,1) - moment_true))
+   xlim([0 1.0])
+   ylim([1e-3 2e-2])
+   set(gca, 'YScale', 'log')
+   hold off
+   xlabel('$\omega$th Moment')
+   ylabel('$<T_2^\omega>$ Abs. Error')
+   grid on
+
+   figure(60)
+   clf
    hold on
    plot(omega, 1./momentVect(:,2))
+   xlim([0 1.0])
+   ylim([100 1000])
+   xlabel('$\omega$th Moment')
+   ylabel('$\frac{1}{\sigma_{est}}$ Weight')
+   set(gca, 'YScale', 'log')
    hold off
+   grid on
+   
    
    figure(56)
    subplot(2,1,1)
@@ -178,10 +249,11 @@ function [estimate, compute_time ,f_est, estimate_bfv] = iltx_estimator(g_bfv, m
    hold on
    plot(T_cutoff, 1./tpdAreasVect(:,2))
    hold off
+
    
 
     
-   
+   %}
     
     W_opt = W_vect .* eye(size(G_opt,1));   
      
@@ -429,12 +501,12 @@ function f_est = optimisationInverseTransform(G, L, W, n_sigma)
             %c = newton_search(L_square, alpha, c, G);
             alpha = n_sigma *sqrt(N)/ norm(c);
             
-            
+            %{
             figure(22)
             plot(max(L'*c,0))
             set(gca, 'XScale', 'log') 
             pause(0.01)
-            
+            %}
             %alpha = 14;
             indx = indx + 1;
             %alpha = median(1./diag(W)) * sqrt(N)/ norm(c);
@@ -594,7 +666,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         end
         %}
 
-        
+        %{
         if moment < 1e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
             %disp('delta * m');
@@ -605,7 +677,7 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
             var = 1e-4; %disregard
             return;
         end
-           
+          %} 
         
         %eq 23
         var = ((delta.^2)*(delta.^2)'/(gamma(omega+1)^2))*(sigma_n/poro)^2;
@@ -657,13 +729,14 @@ function [moment var] = mellinTransform(m, omega, tE, poro, sigma_p, sigma_n);
         omega
         end
         %}
+        %{
         if moment < 5e-1 || abs(moment) == Inf % computation breaks, is negative
             k;
             moment = 0.05;
             var = 0.1; %disregard
             return;
         end
-        
+        %}
         moment = moment;
         
         

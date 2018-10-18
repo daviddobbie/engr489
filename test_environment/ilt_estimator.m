@@ -30,7 +30,7 @@ function [estimate, compute_time, f_est, estimate_bfv] = ilt_estimator(g_bfv, m,
     alph_past = 0;
     indx = 0;
     %alpha = n_sigma * sqrt(N2)/ norm(c)
-    while indx < 40
+    while indx < 20
     %while abs(alph_past - alpha) > 1e-8 && indx < 30
         alph_past = alpha;
         abs(alph_past - alpha);
@@ -44,10 +44,10 @@ function [estimate, compute_time, f_est, estimate_bfv] = ilt_estimator(g_bfv, m,
              
         
         
-        %c = inv(K_square + alpha*eye(length(m_comp))); %eq 29
-        %c = c'*m_comp;
+        c = inv(K_square + alpha*eye(length(m_comp))); %eq 29
+        c = c'*m_comp;
               
-        c = newton_search(K_square, alpha, c, m_comp);
+        %c = newton_search(K_square, alpha, c, m_comp);
         
         %alpha = 0.65*n_sigma * sqrt(N2)/ norm(c);
         alpha = n_sigma * sqrt(N2)/ norm(c);

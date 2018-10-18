@@ -107,9 +107,22 @@ ylim([0 plot_y_limit])
 
 
 
+figure(55)
+clf
+hold on
+p1 = plot(T2,model1_true);
+p1.LineWidth = 1.5;
+hold off
+set(gca, 'XScale', 'log') 
+xlim([1e-4 10])
+ylim([0 plot_y_limit])
+ylabel('$f(T_2)$')
+xlabel('$T_2$')
+grid on
+
 bfv_tapered = zeros(Ny,1);
 
-num_results =10;
+num_results =20;
 
 model1_estiltx_results = zeros(Ny, num_results);
 model1_estilt_results = zeros(Ny, num_results);
@@ -146,10 +159,11 @@ for idx = 1:Ny
 end
 
 
-bfv_sharp'  * model1_estiltx_ans 
+bfv_sharp'  * model1_estiltx_ans ;
 
 
 for indx = 1:num_results
+    indx
     noise = n_sigma*randn(N2-30,1); %assumes AWGN
     
     noise_long = n_sigma*randn(N2,1);
@@ -200,8 +214,8 @@ for indx = 1:num_results
     [bff, compute, model1_estilt, bfv_ilt] = ilt_estimator(bfv_sharp, m_weighted_for_short_pulse ...
         , K_weighted_for_short_pulse, n_sigma, T2, tE);  
     
-     %[bff, compute, model1_estilt_no_short] = ilt_estimator(bfv_tapered, m_noshort_help ...
-     %    , K2, n_sigma, T2, tE);  
+     [bff, compute, model1_estilt_no_short] = ilt_estimator(bfv_tapered, m_noshort_help ...
+         , K2, n_sigma, T2, tE);  
     
        [bff, compute, model1_estiltx,bfv_iltx] = iltx_estimator(bfv_sharp, ...
     m, K2, n_sigma, T2, tE, tau2, moment_actual, mom_kern);  
@@ -224,7 +238,7 @@ for indx = 1:num_results
     
     model1_estiltx_results(:,indx) = model1_estiltx;
     model1_estilt_results(:,indx) = model1_estilt;
-%     model1_estilt_no_short_pulse_results(:, indx) = model1_estilt_no_short;
+    model1_estilt_no_short_pulse_results(:, indx) = model1_estilt_no_short;
 %     
 end
 
@@ -242,6 +256,8 @@ model1_estilt = mean(model1_estilt_results')';
 %model1_estiltx =  mean(model1_estiltx_results')';
 
 RMSE_ilt_techn = ((mean((model1_estilt - model1_estilt_ans).^2))^.5)
+RMS_power_ilt_true = ((mean((model1_estilt_ans).^2))^.5)
+
 
 % returns percentage of error, deviation form the actual simulation
 NRMSE_ilt_techn = 100*(RMSE_ilt_techn)/(mean((model1_estilt_ans).^2))^.5
@@ -255,7 +271,14 @@ max_error_ilt_techn = max(abs(model1_estilt - model1_estilt_ans))
 [h_ilt p_ilt] = kstest2(ecdf(model1_estilt), ecdf(model1_estilt_ans))
 
 
+area_under_curve_ilt_error= trapz((model1_estilt - model1_estilt_ans))
+porosity_ilt = trapz(model1_estilt_ans)
+
 RMSE_iltx_techn = ((mean((model1_estiltx - model1_estiltx_ans).^2))^.5)
+
+RMS_power_iltx_true = ((mean((model1_estiltx_ans).^2))^.5)
+
+
 NRMSE_iltx_techn = 100*(RMSE_iltx_techn)/(mean((model1_estiltx_ans).^2))^.5
 max_error_iltx_techn = max(abs(model1_estiltx - model1_estiltx_ans))
 
@@ -265,7 +288,9 @@ R2_iltx_techn = 1 - MSE_iltx_techn/MSD_iltx
 
 [h_iltx p_iltx] = kstest2(ecdf(model1_estiltx), ecdf(model1_estiltx_ans)) % null hypo that they are the same
 
-%{
+porosity_iltx = trapz(model1_estiltx_ans)
+area_under_curve_iltx_error= trapz((model1_estiltx - model1_estiltx_ans))
+
 figure(7)
 clf
 hold on
@@ -284,7 +309,7 @@ ylim([0 plot_y_limit])
 set(gca, 'XScale', 'log') 
 ylabel('$f(T_2)$')
 xlabel('$T_2$')
-%}
+
 
 
 

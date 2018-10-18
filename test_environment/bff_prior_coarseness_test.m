@@ -1,4 +1,5 @@
 %% Test Environment for BBF Estimation from T2 Relaxation 
+% Exmaining the coarseness of the prior distribution
 % David Dobbie
 % Victoria University of Wellington
 % 
@@ -97,39 +98,16 @@ for Tc_index = 1:length(T2)
     % this function comes from Gruber 2013, the tapered area used.
     bfv_tapered = 1 - ((0.7213 / Tc)*tanh(1.572*Tc*(1./T2 + 0.4087/Tc))./ (1./T2 + 0.4087/Tc))';
 
-    figure(44)
-    clf
-    hold on
-    p1 = plot(T2,bfv_sharp);
-    p1.LineWidth = 2;
-    p2 = plot(T2, bfv_tapered);
-    p2.LineWidth = 2;
-    hold off
-    set(gca, 'XScale', 'log') 
-    grid on
-    legend('BFV Sharp', 'BFV Tapered')
-    xlabel('$T_2$')
-    ylabel('$I(T_2)$')
-    xlim([min(T2) max(T2)])
-    
-
     %% Step 2: Begin Leave One Out Cross Validation
 
-    test_count = 10;
+    test_count = 50;
 
-    bff_est_bayes_sharp_error = zeros(test_count*tot_Prior,1);
-    bff_est_bayes_tapered_error = zeros(test_count*tot_Prior,1);
-    bff_est_ilt_error = zeros(test_count*tot_Prior,1);
-    bff_est_iltx_error = zeros(test_count*tot_Prior,1);
-
-    bff_est_eht_error = zeros(test_count*tot_Prior,1);
-
-
-    bff_est_bayes_sharp_compute_time = zeros(test_count*tot_Prior,1);
-    bff_est_bayes_tapered_compute_time = zeros(test_count*tot_Prior,1);
-    bff_est_ilt_compute_time = zeros(test_count*tot_Prior,1);
-    bff_est_iltx_compute_time = zeros(test_count*tot_Prior,1);
-    bff_est_eht_compute_time = zeros(test_count*tot_Prior,1);    
+    bff_est_iltx_results = zeros(test_count*tot_Prior,1);    
+    bff_est_bayes_sharp_error_29prior = zeros(test_count*tot_Prior,1);
+    bff_est_bayes_sharp_error_20prior = zeros(test_count*tot_Prior,1);
+    bff_est_bayes_sharp_error_10prior = zeros(test_count*tot_Prior,1);
+    bff_est_bayes_sharp_error_5prior = zeros(test_count*tot_Prior,1);
+    bff_est_bayes_sharp_error_1prior = zeros(test_count*tot_Prior,1);
     
     
     for test_indx = 1:test_count
@@ -150,33 +128,45 @@ for Tc_index = 1:length(T2)
             noise = n_sigma*normrnd(0, 1, [N2 ,1]); %assumes AWGN
             m = K2*answer_oneOut + noise; % generates simulated data
 
+            random_indices= randperm(tot_Prior -1);
 
+            indx_rand_prior_20 = random_indices(1:20);
+            indx_rand_prior_10 = random_indices(1:10);
+            indx_rand_prior_5 = random_indices(1:5);
+            indx_rand_prior_1 = random_indices(1);
+            
+            
+            
+            
+            prior30 = prior;
+            prior20 = prior(:, indx_rand_prior_20);
+            prior10 = prior(:, indx_rand_prior_10);
+            prior5 = prior(:, indx_rand_prior_5);            
+            prior1 = prior(:, indx_rand_prior_1);
+            
+            
 
             % generate estimates of the bff
-            [bff_est_bayes_sharp, compute_time_bayes_sharp]= bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior);
-            [bff_est_bayes_tapered, compute_time_bayes_tapered]= bayes_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, prior);        
-            [bff_est_ilt, compute_time_ilt]= ilt_estimator(bfv_tapered, m, K2, n_sigma, T2, tE);              
-            [bff_est_iltx, compute_time_iltx]= iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
-
-            [bff_est_eht, compute_time_eht] = tapered_area(Tc, m, n_sigma, T2, tE, tau2);           
-
-
+            [bff_est_bayes_sharp_29]= bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior30);       
+            [bff_est_bayes_sharp_20]= bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior20);       
+            [bff_est_bayes_sharp_10]= bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior10);       
+            [bff_est_bayes_sharp_5]= bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior5);       
+            [bff_est_bayes_sharp_1]= bayes_estimator(bfv_sharp, m, K2, n_sigma, T2, tE, prior1);       
+            bff_est_iltx = iltx_estimator(bfv_tapered, m, K2, n_sigma, T2, tE, tau2); 
 
 
+
+
+            
             bff_actual = bff_answer(answer_oneOut, bfv_sharp);
 
+            bff_est_iltx_results((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_iltx - bff_actual); 
+            bff_est_bayes_sharp_error_29prior((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp_29 - bff_actual); 
+            bff_est_bayes_sharp_error_20prior((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp_20 - bff_actual); 
+            bff_est_bayes_sharp_error_10prior((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp_10 - bff_actual); 
+            bff_est_bayes_sharp_error_5prior((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp_5 - bff_actual); 
+            bff_est_bayes_sharp_error_1prior((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp_1 - bff_actual); 
 
-            bff_est_bayes_sharp_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_sharp - bff_actual);
-            bff_est_bayes_tapered_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_bayes_tapered - bff_actual); 
-            bff_est_ilt_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_ilt - bff_actual); 
-            bff_est_iltx_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_iltx - bff_actual); 
-            bff_est_eht_error((test_indx-1)*(tot_Prior) + indx) = abs(bff_est_eht - bff_actual); 
-            
-            bff_est_bayes_sharp_compute_time((test_indx-1)*(tot_Prior) + indx) = compute_time_bayes_sharp;
-            bff_est_bayes_tapered_compute_time((test_indx-1)*(tot_Prior) + indx) = compute_time_bayes_tapered;
-            bff_est_ilt_compute_time((test_indx-1)*(tot_Prior) + indx) = compute_time_ilt;
-            bff_est_iltx_compute_time((test_indx-1)*(tot_Prior) + indx) = compute_time_iltx; 
-            bff_est_eht_compute_time((test_indx-1)*(tot_Prior) + indx) = compute_time_eht;             
             
             
         end
@@ -189,63 +179,22 @@ for Tc_index = 1:length(T2)
     clf
     hold on
     
-    cdfplot(bff_est_bayes_sharp_error);
-    cdfplot(bff_est_bayes_tapered_error);
-    cdfplot(bff_est_ilt_error);
-    cdfplot(bff_est_iltx_error);
-    cdfplot(bff_est_eht_error);
+    cdfplot(bff_est_bayes_sharp_error_29prior);
+    cdfplot(bff_est_bayes_sharp_error_20prior);    
+    cdfplot(bff_est_bayes_sharp_error_10prior);      
+    cdfplot(bff_est_bayes_sharp_error_5prior);      
+    cdfplot(bff_est_bayes_sharp_error_1prior);      
+    
+    cdfplot(bff_est_iltx_results);  
+    
     title('')
-    legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT Reproduced', ...
-        'ILT+ Reproduced', 'EHT Reproduced','location','SouthEast')
     xlabel('BFF Absolute Error')
     ylabel('Prob(Error \textless  X)')
     xlim([0 0.4])
     hold off
 
-    figure(3)
-    clf
-    subplot(2,2,1)
-    hist(bff_est_bayes_sharp_error);
-    legend('Bayes Sharp BFV')
-    xlim([0 1])    
-    subplot(2,2,2)    
-    hist(bff_est_ilt_error);
-    legend('ILT est.')
-    xlim([0 1])
-    subplot(2,2,3)     
-    hist(bff_est_iltx_error);
-    legend('ILT+ est')
-    xlim([0 1])
-    subplot(2,2,4)        
-    hist(bff_est_eht_error);
-    legend('EHT est.')
-    xlim([0 1])
-
-
-    
-
-    figure(4)
-    clf
-    hold on
-    
-    cdfplot(bff_est_bayes_sharp_compute_time);
-    
-    
-    lin = plot(bff_est_bayes_sharp_compute_time) ;
-
-    
-    cdfplot(bff_est_ilt_compute_time);
-        delete(lin);
-    cdfplot(bff_est_iltx_compute_time);
-    cdfplot(bff_est_eht_compute_time);
-    title('')
-    legend('Bayes Method', 'ILT Reproduced', ...
-        'ILT+ Reproduced', 'EHT Reproduced','location','SouthEast')
-    xlabel('Compute Time (s)')
-    ylabel('Prob(Time \textless  X)')
-    hold off
-    
-
+    legend('Prior of 29','Prior of 20','Prior of 10','Prior of 5', ...
+        'Prior of 1', 'ILT+ Reproduced')
     
     
     
@@ -254,21 +203,15 @@ for Tc_index = 1:length(T2)
     %root mean squared error
     bayes_sharp_RMSE = (mean((bff_est_bayes_sharp_error).^2))^.5
     bayes_tapered_RMSE = (mean((bff_est_bayes_tapered_error).^2))^.5
-    ilt_RMSE = (mean((bff_est_ilt_error).^2))^.5
-    iltx_RMSE = (mean((bff_est_iltx_error).^2))^.5
-    eht_RMSE = (mean((bff_est_eht_error).^2))^.5
 
     RMSE_all(Tc_index,1) = bayes_sharp_RMSE;
     RMSE_all(Tc_index,2) = bayes_tapered_RMSE;
-    RMSE_all(Tc_index,3) = ilt_RMSE;
-    RMSE_all(Tc_index,4) = iltx_RMSE;
-    RMSE_all(Tc_index,5) = eht_RMSE;
 end
 
 figure(4)
 clf
 hold on
-plot(T2, RMSE_all(:,1:4))
+plot(T2, RMSE_all)
 % legend('Bayes Sharp BFV', 'Bayes Tapered BFV', 'ILT Reproduced', ...
 %         'ILT+ Reproduced', 'EHT Reproduced','location','SouthEast')
 xlabel('$T_c$')   
