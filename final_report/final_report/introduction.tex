@@ -1,0 +1,35 @@
+\chapter{Introduction}\label{C:intro}
+Relaxation times gathered from nuclear magnetic resonance (NMR) experiments provide insight into the physical nature of a sample \cite{GruberLinearFunctionals2013}. However, most NMR experiments are restricted to a limited and controlled environment - like a laboratory \cite{IntrinsicSNREdelstein1986}. To be practicable in use cases that have hard constraints such as high noise or low signal power, more advanced signal processing is required. This report details a new technique which extends of the use of NMR in noisy environments by utilising prior high quality measurement data.
+
+\section{Motivation}
+The focus of this project is to create a more noise resistant estimator of the bound fluid fraction (BFF) of porous media via NMR relaxation. This physical property is crucial for evaluating the viability of an oil well \cite{wellLoggingBook}.  Fluid that is bound to a porous media, sandstone for example, is considered uneconomic to obtain in a mineral extraction process. The noisy environment of the oil well complicates estimation adversely \cite{wellLoggingBook}. This necessitates the use and design of robust estimation techniques \cite{BadTruthLaplaceEpstein2008}\cite{NumericalInversionLaplaceTransform1978}, such as the Bayesian technique proposed by this project. 
+
+Beyond the estimation of BFF, the improvements on NMR signal processing made in this project are potentially transferable to other applications where power is limited. These can include identifying the nature of fluids in food products so that we may minimise wastage \cite{NMRFOODCapitani2017}. Therefore, a robust analysis of the proposed estimator will form an indication of further viability.
+
+
+
+\section{Goals}
+The goals of this project were to:
+\begin{enumerate}
+    \item implement and evaluate the competing techniques for estimating the BFF of a sample via T2 relaxation measurements;
+    \item design, implement, and evaluate a new technique using Bayesian statistics to estimate the BFF of a sample via T2 relaxation.
+
+\end{enumerate}
+
+
+\section{Report Outline}
+This report discusses in detail the current field of techniques and the method proposed by this project. The structure of it is as follows:
+
+\begin{itemize}
+    \item Chapter 2 - Background - establishes the physical basis of NMR relaxation for bound fluid fraction and explores the current literature for estimation of the desnity of relaxation times.
+    
+    \item Chapter 3 - Design - explores the design aspects of the proposed technique such as constraints and pathways chosen.
+    
+    \item Chapter 4 - Implementation - explores the development of the original techniques and the proposed technique, the validation of these techniques, and the test architecture created for comparison.
+    
+    \item Chapter 5 - Evaluation - directly compares the techniques' performance, with attention paid towards performance for a typical operating point in the field.
+    
+    \item Chapter 6 - Conclusions - summarises this report and discusses possible future pathways beyond this project.
+    
+    
+\end{itemize}

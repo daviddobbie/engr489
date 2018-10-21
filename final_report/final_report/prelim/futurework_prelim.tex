@@ -1,0 +1,68 @@
+\chapter{Future Work}\label{C:prog}
+The main constraint of the literature`s effectiveness has been on maintaining generality by constraining the amount of prior information that can be used. The future work seeks to allow for more reliable high quality experimental data to act as useful prior information. This introduces potential for more noise immunity in low SNR environments.
+
+\section{Estimating Porosity}
+Throughout the techniques explored the porosity was assumed to be already known and held constant. This is another linear functional that is solely dependent on measured data. That means it can be used to add another dimension onto the optimisation framework. Venkataramnan et al. have provided a method to estimate the porosity. This will be evaluated to allow for stronger evaluation of the current techniques available \cite{venkataramanan2015newPorosity}.
+
+\section{Work on the New Bayesian Technique}
+\subsection{Estimation of $f(T_2)$}
+The Bayesian technique uses the probability of some measured data caused by a given density function to derive the likelihood of that function. This additional parameter allows for a more robust estimation. The starting point for this is detailed in \cite{paulTeal_NMRBayes}. The technique is expressed in Bayes' Rule as:
+\begin{equation}
+    p(f|m) = \frac{p(m|f)p(f)}{p(m)} = \frac{p(m|f)p(f)}{\int p(m|f)p(f) df}
+    \label{eq:bayesMethod}
+\end{equation}
+where $f$ is a density function estimate, and $m$ is the measured data.
+
+We can determine the best fitting $f$ by calculating and comparing $p(m|f)p(f)$ as $p(m)$ remains constant. Using the model expressed in equation \ref{eq:T2RelaxationModelMatrices}, the likelihood of measured data given a hypothesis takes the form of
+\begin{equation}
+    m|f \sim \mathcal{N}(Kf, C_\epsilon)
+\end{equation}
+where $C_\epsilon$ is the covariance of the noise.
+
+\paragraph{}
+The construction of the prior $p(f)$ in eq. \ref{eq:bayesMethod}, the likelihood of the density function, forms the crux of the technique. The development of the proposed technique will explore combining high quality laboratory data with low quality measured data to obtain $p(f)$. The integration of this into the pre-existing optimisation framework \cite{GruberT2Estimation2013} will be explored, implemented, and evaluated. Another possible technique of finding the optima of $p(f|m)$ for different $f$ will also be explored, implemented, and evaluated.
+
+\subsection{Direct Estimation of $BBF$}
+Bayes' Rule can also form the basis for estimating the bound fluid fraction directly with:
+\begin{equation}
+    p(BBF|m) = \frac{p(m|BBF)p(BBF)}{p(m)}
+\end{equation}
+The direct estimation of the bound fluid fraction is the overall goal of these estimation techniques so it will also be implemented and evaluated.
+
+\section{Evaluation with Experimental Data}
+There is a foundation to develop on top of the current optimisation framework to include high quality measured data. The high quality data to be used by the project is in the form of 30 experimental measurements of rock samples obtained from Schlumberger Doll Research. This allows for a stronger evaluation of the data to be made.
+\\
+Cross validation can be used to measure the accuracy of the estimation process \cite{crossValidation}. This involves splitting the dataset into three sets: the training set, test set, and validation set. The training dataset directly provides the algorithm information to calibrate it. The validation set evaluates the fitting of the trained estimator at each iteration. Finally, the test set evaluates the overall process. This final set prevents the tuning process from falling victim to overfitting or leaked information.
+
+
+\section{Future Plan}
+The future plan for the rest of the project is outlined in table \ref{tab:futurePlan}. Now that most of the current techniques have been recreated, construction can begin on the proposed method. Firstly, a simple version of the density function estimator will be constructed. It will grow in complexity for its second iteration with its integration of high quality experimental data. Afterwards, the estimator will augment the optimisation framework detailed in \cite{GruberT2Estimation2013}. Afterwards, a direct $BBF$ estimator will be explored. Finally, cross validation will implemented to evaluate the technique fairly.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{l l l}
+        \toprule
+        \hfill Task  &      Est. hours &     \hfill   Done by \\
+        \midrule
+        Improved porosity estimator \cite{venkataramanan2015newPorosity} & 20 & 22 June (Mid Exam Period) \\
+        1st iteration $f(T_2)$ estimator & 25 & 6 July (End of Exam Period) \\
+        Mid-project presentation & 10 & 13 July (Wk 1 Trimester 2)\\
+        2nd iteration $f(T_2)$ estimator & 25 & 3 August (Wk 3 Trimester 2) \\
+        New optimisation framework & 25 & 17 August (Wk 5 Trimester 2) \\
+        $BBF$ estimator & 20 & 31 August (Wk 1 Mid-Trimester Break)\\
+        Cross validation evaluation & 20 & 14 September (Wk 8 Trimester 2) \\
+        Project snapshot completed & 5 & 1 October (Wk 10 Trimester 2)\\
+        Writing the final report & 40 & 19 October (Wk 12 Trimester 2)\\
+        \bottomrule
+    \end{tabular}
+    \caption{The future plan for the rest of the project}
+    \label{tab:futurePlan}
+\end{table}
+
+
+
+
+
+
+
+

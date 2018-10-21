@@ -1,0 +1,24 @@
+\chapter{Conclusions}\label{C:conclusions}
+
+The project aimed to implement and evaluate the proposed Bayesian estimator alongside the existing published techniques.
+
+In the background, the physical model of NMR relaxation was established. Building off this model, the literature provides a comprehensive benchmark of the current field of estimating T2 relaxation. Satisfying constraints of prior information such as the non-negativity of T2 relaxation times and knowledge of the SNR, they provided robust methods of approximating T2 relaxation density. In nosier environments however, these priori were less useful. An inclusion of a more useful prior grounded in the physical model was required.
+
+The design discusses the how a more useful prior may be implemented with a Bayesian framework. To use a multivariate case of Bayes' theorem such that the it were analytically tractable we assume T2 relaxation timess are to be from a Gaussian distribution. Given this assumption, there is the design question in how we derive the mean and covariance of the prior density function. Allowing for dependence between each of the T2 relaxation bins, at the risk of losing some generality, solves this question. With high quality experimental data embedded into the estimator, we could implement the Bayesian estimator.
+
+Implementation of the existing methods and the proposed method allows for evaluation for different environments such that algorithm robustness and accuracy could be compared. The validation framework built for implementation compares the reproduced and published techniques. The complexity of the ILT+ algorithm complicated direct one-to-one recreation so the reproduction utilised a tuned variation of this. This preserved the indicative performance of the system so that comparison and analysis would be valid. In addition, the proposed Bayesian estimator demonstrated considerable simplicity in implementation in comparison to the majority of the published techniques.
+
+The evaluation of the estimator for different environments in comparison with the reproduced techniques demonstrates the improvements made by using a more comprehensive prior. The Bayesian estimator outperforms the existing reproduced techniques generally for different SNR and bound fluid cut-off. This is done via cross-validation so that we could ensure generality of performance measurement. However, the framework fails if the prior poorly describes what it estimates. With these different perspectives of analysis, we determine that the Bayesian estimator is superior if it has a prior representative of what is measured.
+
+\section{Future Work}
+The potential and viability found with the Bayesian framework introduces a potential for its application in other adversely noisy estimation problems. The main parts of this include adapting the Bayesian framework towards different models.
+
+Specifically, additional potential avenues of future work for the Bayes estimator include:
+\begin{itemize}
+    \item Increasing the computational speed of the estimator. There may be potential in adding compressive technologies to get the full benefit of the non-iterative analytic Bayesian expression.
+    \item Examining sensitivity for what forms the prior information, i.e. how well a prior made from only carbonate rock samples may be applicable to sandstone rock samples. 
+    \item Can a log-normal noise model be applicable to a tractable Bayesian framework to prevent non-negative density functions.
+    \item Could the Bayes framework augment the ILT+ technique to acquire a general and robust estimator with built in flexibility in prior information.
+\end{itemize}
+
+
