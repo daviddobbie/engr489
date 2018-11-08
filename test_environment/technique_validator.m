@@ -189,11 +189,11 @@ for indx = 1:num_results
     
     m_weighted_for_short_pulse = m_weighted_for_short_pulse;
     
-   %{
+   
     figure(4)
     clf
-    plot(tau2,m)
-    %}
+    p1 = plot(tau2,m)
+    p1.LineWidth = 1;
 %{
     figure(33)
     clf
@@ -222,7 +222,7 @@ for indx = 1:num_results
 
 
 
-    %{
+    
         figure(2)
         hold on
 
@@ -230,7 +230,7 @@ for indx = 1:num_results
         set(gca, 'XScale', 'log') 
         xlim([1e-4 10])
         ylim([0 0.025])
-%}
+
 
         
     bfv_iltx_results(indx) = bfv_iltx;
